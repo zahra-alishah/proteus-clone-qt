@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/3D.png</file>
+        <file>icons/AI.png</file>
+        <file>icons/Bill.png</file>
+        <file>icons/code.png</file>
+        <file>icons/gerber.png</file>
+        <file>icons/overview.png</file>
+        <file>icons/cpu.png</file>
+        <file>icons/home.png</file>
+        <file>icons/notes.png</file>
+        <file>icons/open-folder.png</file>
+        <file>icons/personal-data.png</file>
+        <file>icons/room.png</file>
+        <file>icons/schematic.png</file>
+        <file>icons/structure.png</file>
+        <file>icons/symbol.png</file>
+        <file>icons/explorer.png</file>
+        <file>icons/new.png</file>
+        <file>icons/proteus.svg</file>
+    </qresource>
+</RCC>

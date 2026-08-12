@@ -1,0 +1,19 @@
+# Qt Creator build folders
+build-*/
+*.user
+*.user.*
+.qmake.stash
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.app
+moc_*.cpp
+moc_*.h
+ui_*.h
+qrc_*.cpp
+
+# macOS specific junk
+.DS_Store
+*.xcuserstate

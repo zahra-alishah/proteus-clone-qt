@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>33</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="menuProteus_Modules">
+     <property name="title">
+      <string>Proteus Modules</string>
+     </property>
+     <widget class="QMenu" name="menuLibrary_Manager">
+      <property name="title">
+       <string>Library Manager</string>
+      </property>
+      <addaction name="actionDevice_Library_Manager"/>
+      <addaction name="actionPackage_Library_Manager"/>
+      <addaction name="actionSymbol_Library_Manager"/>
+     </widget>
+     <addaction name="actionHome_Page"/>
+     <addaction name="actionSchematic_Capture"/>
+     <addaction name="actionPCB_Layout"/>
+     <addaction name="actionSource_Code"/>
+     <addaction name="actionDesign_Explorer"/>
+     <addaction name="menuLibrary_Manager"/>
+     <addaction name="actionProject_Notes"/>
+     <addaction name="action3D_Visualizer"/>
+     <addaction name="actionGerber_Viewer"/>
+     <addaction name="actionBill_of_Materials"/>
+    </widget>
+    <addaction name="actionNew_Project"/>
+    <addaction name="actionOpen_Project"/>
+    <addaction name="actionOpen_Sample_Project"/>
+    <addaction name="actionImport_ECAD_Files"/>
+    <addaction name="actionSave_Project"/>
+    <addaction name="actionSave_Project_As"/>
+    <addaction name="actionClose_Project"/>
+    <addaction name="separator"/>
+    <addaction name="actionExplore_Project_Folder"/>
+    <addaction name="actionEdit_Project_Description"/>
+    <addaction name="separator"/>
+    <addaction name="menuProteus_Modules"/>
+    <addaction name="separator"/>
+    <addaction name="actionRecent_Projects"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit_Application"/>
+   </widget>
+   <widget class="QMenu" name="menuSystem">
+    <property name="title">
+     <string>System</string>
+    </property>
+    <widget class="QMenu" name="menuOther_Tools">
+     <property name="title">
+      <string>Other Tools</string>
+     </property>
+     <addaction name="actionMigration_Tool"/>
+     <addaction name="actionLicence_Manager"/>
+    </widget>
+    <addaction name="actionSystem_Settings"/>
+    <addaction name="actionSettings_Import_and_Export"/>
+    <addaction name="actionSet_KeyBoard_Mapping"/>
+    <addaction name="separator"/>
+    <addaction name="actionCheck_for_Updates"/>
+    <addaction name="actionRepair_language_pack"/>
+    <addaction name="separator"/>
+    <addaction name="menuOther_Tools"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionOverview"/>
+    <addaction name="separator"/>
+    <addaction name="actionProteus"/>
+    <addaction name="separator"/>
+    <addaction name="actionProPilot_AI_Assistant"/>
+    <addaction name="separator"/>
+    <addaction name="actionAbout_Proteus"/>
+    <addaction name="actionAbout_Qt"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuSystem"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionOpen_Project">
+   <property name="text">
+    <string>Open Project</string>
+   </property>
+  </action>
+  <action name="actionOpen_Sample_Project">
+   <property name="text">
+    <string>Open Sample Project</string>
+   </property>
+  </action>
+  <action name="actionImport_ECAD_Files">
+   <property name="text">
+    <string>Import ECAD Files</string>
+   </property>
+  </action>
+  <action name="actionSave_Project">
+   <property name="text">
+    <string>Save Project</string>
+   </property>
+  </action>
+  <action name="actionSave_Project_As">
+   <property name="text">
+    <string>Save Project As</string>
+   </property>
+  </action>
+  <action name="actionClose_Project">
+   <property name="text">
+    <string>Close Project</string>
+   </property>
+  </action>
+  <action name="actionExplore_Project_Folder">
+   <property name="text">
+    <string>Explore Project Folder</string>
+   </property>
+  </action>
+  <action name="actionEdit_Project_Description">
+   <property name="text">
+    <string>Edit Project Description</string>
+   </property>
+  </action>
+  <action name="actionExit_Application">
+   <property name="text">
+    <string>Exit Application</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::TextHeuristicRole</enum>
+   </property>
+  </action>
+  <action name="actionHome_Page">
+   <property name="text">
+    <string>Home Page</string>
+   </property>
+  </action>
+  <action name="actionSchematic_Capture">
+   <property name="text">
+    <string>Schenatic Capture</string>
+   </property>
+  </action>
+  <action name="actionPCB_Layout">
+   <property name="text">
+    <string>PCB Layout</string>
+   </property>
+  </action>
+  <action name="actionSource_Code">
+   <property name="text">
+    <string>Source Code</string>
+   </property>
+  </action>
+  <action name="actionDesign_Explorer">
+   <property name="text">
+    <string>Design Explorer</string>
+   </property>
+  </action>
+  <action name="actionProject_Notes">
+   <property name="text">
+    <string>Project Notes</string>
+   </property>
+  </action>
+  <action name="action3D_Visualizer">
+   <property name="text">
+    <string>3D Visualizer</string>
+   </property>
+  </action>
+  <action name="actionGerber_Viewer">
+   <property name="text">
+    <string>Gerber Viewer</string>
+   </property>
+  </action>
+  <action name="actionBill_of_Materials">
+   <property name="text">
+    <string>Bill of Materials</string>
+   </property>
+  </action>
+  <action name="actionDevice_Library_Manager">
+   <property name="text">
+    <string>Device Library Manager</string>
+   </property>
+  </action>
+  <action name="actionPackage_Library_Manager">
+   <property name="text">
+    <string>Package Library Manager</string>
+   </property>
+  </action>
+  <action name="actionSymbol_Library_Manager">
+   <property name="text">
+    <string>Symbol Library Manager</string>
+   </property>
+  </action>
+  <action name="actionSystem_Settings">
+   <property name="text">
+    <string>System Settings</string>
+   </property>
+  </action>
+  <action name="actionSettings_Import_and_Export">
+   <property name="text">
+    <string>Settings Import and Export</string>
+   </property>
+  </action>
+  <action name="actionSet_KeyBoard_Mapping">
+   <property name="text">
+    <string>Set KeyBoard Mapping</string>
+   </property>
+  </action>
+  <action name="actionCheck_for_Updates">
+   <property name="text">
+    <string>Check for updates</string>
+   </property>
+  </action>
+  <action name="actionRepair_language_pack">
+   <property name="text">
+    <string>Repair language pack</string>
+   </property>
+  </action>
+  <action name="actionOverview">
+   <property name="text">
+    <string>Overview</string>
+   </property>
+  </action>
+  <action name="actionProteus">
+   <property name="text">
+    <string>Proteus</string>
+   </property>
+  </action>
+  <action name="actionProPilot_AI_Assistant">
+   <property name="text">
+    <string>ProPilot (AI Assistant)</string>
+   </property>
+  </action>
+  <action name="actionAbout_Proteus">
+   <property name="text">
+    <string>About Proteus</string>
+   </property>
+  </action>
+  <action name="actionAbout_Qt">
+   <property name="text">
+    <string>About Qt</string>
+   </property>
+  </action>
+  <action name="actionNew_Project">
+   <property name="text">
+    <string>New Project</string>
+   </property>
+  </action>
+  <action name="actionRecent_Projects">
+   <property name="text">
+    <string>Recent Projects</string>
+   </property>
+  </action>
+  <action name="actionMigration_Tool">
+   <property name="text">
+    <string>Migration Tool</string>
+   </property>
+  </action>
+  <action name="actionLicence_Manager">
+   <property name="text">
+    <string>Licence Manager</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
