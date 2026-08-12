@@ -1,5 +1,6 @@
 #include "schematicpage.h"
 #include "ui_schematicpage.h"
+#include "shematicclass.h"
 #include <QMenuBar>
 #include <QVBoxLayout>
 #include <QToolBar>
@@ -10,6 +11,9 @@
 #include <QLabel>
 #include <QStackedWidget>
 #include <QButtonGroup>
+#include <QListWidget>
+#include <QMouseEvent>
+
 
 schematicPage::schematicPage(QWidget *parent) : QWidget(parent), ui(new Ui::schematicPage)
 {
@@ -509,6 +513,40 @@ schematicPage::schematicPage(QWidget *parent) : QWidget(parent), ui(new Ui::sche
     btnXMirror -> setCheckable(true);
     btnYMirror -> setCheckable(true);
 
+    QButtonGroup *toolGroup = new QButtonGroup(this);
+    toolGroup->addButton(btnSelection);
+    toolGroup->addButton(btnComponent);
+    toolGroup->addButton(btnJunctionDot);
+    toolGroup->addButton(btnWireLabel);
+    toolGroup->addButton(btnTextScript);
+    toolGroup->addButton(btnBuses);
+    toolGroup->addButton(btnSubCircuit);
+    toolGroup->addButton(btnTerminals);
+    toolGroup->addButton(btnDevicePins);
+    toolGroup->addButton(btnGraph);
+    toolGroup->addButton(btnActivePopUp);
+    toolGroup->addButton(btnGenerator);
+    toolGroup->addButton(btnProbMode);
+    toolGroup->addButton(btnVirtualInstruments);
+    toolGroup->addButton(btn2DGraphicsLine);
+    toolGroup->addButton(btn2DGraphicsBox);
+    toolGroup->addButton(btn2DGraphicsCircle);
+    toolGroup->addButton(btn2DGraphicsArc);
+    toolGroup->addButton(btn2DGraphicsClosedPath);
+    toolGroup->addButton(btn2DGraphicsText);
+    toolGroup->addButton(btn2DGraphicsSymbols);
+    toolGroup->addButton(btn2DGraphicsMarkers);
+    toolGroup->addButton(btnRotateClockwise);
+    toolGroup->addButton(btnRotateAntiClockwise);
+    toolGroup->addButton(btnXMirror);
+    toolGroup->addButton(btnYMirror);
+
+
+    QStackedWidget *modeStack = new QStackedWidget();
+    sideLayout->addWidget(modeStack);
+    modeStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+
     sideLayout -> addWidget(btnSelection);
     sideLayout -> addWidget(btnComponent);
     sideLayout -> addWidget(btnJunctionDot);
@@ -537,8 +575,6 @@ schematicPage::schematicPage(QWidget *parent) : QWidget(parent), ui(new Ui::sche
     rotationSpin -> setRange(0, 359);
     rotationSpin -> setSuffix("°");
     rotationSpin -> setValue(0);
-    sideLayout -> addWidget(btnXMirror);
-    sideLayout -> addWidget(btnYMirror);
 
     btnSelection -> setToolTip("Selection Mode");
     btnComponent -> setToolTip("Component Mode");
@@ -567,8 +603,7 @@ schematicPage::schematicPage(QWidget *parent) : QWidget(parent), ui(new Ui::sche
     btnXMirror -> setToolTip("X-Mirror Mode");
     btnYMirror -> setToolTip("Y-Mirror Mode");
 
-    QStackedWidget *modeStack = new QStackedWidget();
-    sideLayout->addWidget(modeStack);
+
 
     //INDEX 0
     QWidget *widgetDevices = new QWidget();
@@ -591,10 +626,18 @@ schematicPage::schematicPage(QWidget *parent) : QWidget(parent), ui(new Ui::sche
     QLabel *headerPort = new QLabel("P    PORTS");
     headerPort->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutPorts->addWidget(headerPort);
-    QComboBox *comboPorts = new QComboBox();
-    comboPorts->addItems({"DEFAULT", "INPUT", "OUTPUT", "BIDIR", "POWER", "GROUND", "BUS"});
-    comboPorts->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutPorts->addWidget(comboPorts);
+    QListWidget *listPorts = new QListWidget();
+    listPorts->addItems({"DEFAULT", "INPUT", "OUTPUT", "BIDIR", "POWER", "GROUND", "BUS"});
+    listPorts->setSelectionMode(QAbstractItemView::SingleSelection);
+    listPorts->setCurrentRow(0);
+
+    listPorts->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listPorts->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }"
+        );
+    layoutPorts->addWidget(listPorts);
 
     modeStack->addWidget(widgetPorts);
 
@@ -820,6 +863,55 @@ schematicPage::schematicPage(QWidget *parent) : QWidget(parent), ui(new Ui::sche
         }
     });
 
+    sideLayout->addWidget(rotationSpin);
+    sideLayout -> addWidget(btnXMirror);
+    sideLayout -> addWidget(btnYMirror);
+
+    // --- Build the canvas and bottom bar ---
+    shematicClass *schematicCanvas = new shematicClass();
+    QWidget *bottomBar = new QWidget();
+    bottomBar->setFixedHeight(30);
+    bottomBar->setStyleSheet("background-color: #f0f0f0; border-top: 1px solid #d0d0d0;");
+    bottomBar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed); // Prevents stretching
+
+    QHBoxLayout *bottomLayout = new QHBoxLayout(bottomBar);
+    bottomLayout->setContentsMargins(5, 2, 5, 2);
+    bottomLayout->setSpacing(15);
+
+    QLabel *statusMessage = new QLabel("No Messages");
+    QLabel *sheetLabel = new QLabel("ROOT - Root sheet 1");
+    QLabel *coordsLabel = new QLabel("x: 0.0 y: 0.0");
+    coordsLabel->setFixedWidth(100);
+    coordsLabel->setStyleSheet("font-family: monospace; font-size: 12px; color: #333;");
+
+    bottomLayout->addWidget(statusMessage);
+    bottomLayout->addWidget(sheetLabel);
+    bottomLayout->addStretch();
+    bottomLayout->addWidget(coordsLabel);
+
+    // Connect coordinates
+    connect(schematicCanvas, &shematicClass::mouseCoordinatesChanged, this, [=](QString coords){
+        coordsLabel->setText(coords);
+    });
+
+    // --- Add everything to the Main Layout (PROPERLY) ---
+    splitter->addWidget(sidebar);
+    splitter->addWidget(schematicCanvas);
+
+    // Remove the layout border so splitter doesn't overlap the bottom bar
+    splitter->setStyleSheet("QSplitter { border: none; }");
+
+    // NOTE: use 0 margins! The stretch factors will handle the spacing.
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+
+    // 0 = Fixed size, 1 = takes all extra space
+    mainLayout->addWidget(myMenuBar, 0);
+    mainLayout->addWidget(myToolBar, 0);
+    mainLayout->addWidget(splitter, 1);
+    mainLayout->addWidget(bottomBar, 0);
+
+
+
 
 }
 
@@ -827,3 +919,5 @@ schematicPage::~schematicPage()
 {
     delete ui;
 }
+
+

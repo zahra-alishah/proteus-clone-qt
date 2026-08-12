@@ -17,6 +17,8 @@ public:
 
 private:
     Ui::schematicPage *ui;
+
+
 };
 
 #endif // SCHEMATICPAGE_H

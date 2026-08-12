@@ -73,7 +73,8 @@ OBJECTS       = main.o \
 		moc_schematicpage.o \
 		moc_shematicClass.o \
 		moc_wizard.o
-DIST          = /Users/alishah/Qt/6.11.1/macos/mkspecs/features/spec_pre.prf \
+DIST          = ../../.gitignore \
+		/Users/alishah/Qt/6.11.1/macos/mkspecs/features/spec_pre.prf \
 		/Users/alishah/Qt/6.11.1/macos/mkspecs/features/device_config.prf \
 		/Users/alishah/Qt/6.11.1/macos/mkspecs/common/unix.conf \
 		/Users/alishah/Qt/6.11.1/macos/mkspecs/common/mac.conf \
@@ -1042,6 +1043,8 @@ mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
 schematicpage.o: ../../schematicpage.cpp ../../schematicpage.h \
 		/Users/alishah/Qt/6.11.1/macos/lib/QtWidgets.framework/Headers/QWidget \
 		ui_schematicpage.h \
+		../../shematicclass.h \
+		/Users/alishah/Qt/6.11.1/macos/lib/QtWidgets.framework/Headers/QGraphicsView \
 		/Users/alishah/Qt/6.11.1/macos/lib/QtWidgets.framework/Headers/QMenuBar \
 		/Users/alishah/Qt/6.11.1/macos/lib/QtWidgets.framework/Headers/QVBoxLayout \
 		/Users/alishah/Qt/6.11.1/macos/lib/QtWidgets.framework/Headers/QToolBar \

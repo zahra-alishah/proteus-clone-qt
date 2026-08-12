@@ -85,6 +85,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     connect(ui -> actionNew_Project, &QAction::triggered, this, &MainWindow::onNewProject);
 
+    connect(myTabs, &QTabWidget::currentChanged, this, [=](int index){
+        if (index == 0) {
+            myToolBar->setVisible(true);
+        } else {
+            myToolBar->setVisible(false);
+        }
+    });
+
 }
 
 MainWindow::~MainWindow()

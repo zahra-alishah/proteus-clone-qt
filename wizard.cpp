@@ -52,21 +52,6 @@ wizard::wizard(QWidget *parent) : QDialog(parent), ui(new Ui::wizard)
 
     connect(ui->pushButton_next_2, &QPushButton::clicked, this, &QDialog::accept);
 
-    wizard wizard(this);
-    int result = wizard.exec();
-
-    if(result == QDialog::Accepted){
-
-        QWidget *schematicContainer = new QWidget;
-
-
-
-
-
-    }
-
-
-
 }
 
 wizard::~wizard()
