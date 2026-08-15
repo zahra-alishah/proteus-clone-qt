@@ -1,10 +1,7 @@
-# Qt Creator build folders
-build-*/
+build/
 *.user
 *.user.*
 .qmake.stash
-
-# Compiled files
 *.o
 *.obj
 *.exe
@@ -13,7 +10,4 @@ moc_*.cpp
 moc_*.h
 ui_*.h
 qrc_*.cpp
-
-# macOS specific junk
 .DS_Store
-*.xcuserstate
