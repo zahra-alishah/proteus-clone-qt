@@ -18,27 +18,33 @@
 
 namespace {
 
-// Very small heuristic used only to decide which symbol to sketch in the
-// preview box. It does NOT depend on Component.h on purpose, so this file
-// has no coupling with the simulation-side component classes.
-enum class SymbolKind { Resistor, Capacitor, Inductor, Battery, Ground, Diode, Led, Ic, Switch, Generic };
+// Small heuristic used only to decide which symbol to sketch in the preview
+// box. Kept independent from Component.h on purpose (this is only a visual
+// hint inside the dialog, not the real draw() used on the canvas).
+enum class SymbolKind {
+    Resistor, Capacitor, Inductor, Battery, DcSource, Clock, Ground,
+    Switch, PushButton, Led, SevenSeg, Gate, FlipFlop, Generic
+};
 
-SymbolKind classify(const QString &name, const QString &category)
+SymbolKind classify(const QString &name)
 {
     const QString n = name.toUpper();
-    const QString c = category.toUpper();
 
-    if (n.contains("RES") || c.contains("RESIST"))   return SymbolKind::Resistor;
-    if (n.contains("CAP")  || c.contains("CAPACIT")) return SymbolKind::Capacitor;
-    if (n.contains("IND")  || c.contains("INDUCT") || n.contains("CHOKE")) return SymbolKind::Inductor;
-    if (n.contains("BATT") || n.contains("CELL") || n.contains("DC-SOURCE")) return SymbolKind::Battery;
-    if (n == "GND" || n.contains("GROUND"))          return SymbolKind::Ground;
-    if (n.contains("LED"))                           return SymbolKind::Led;
-    if (n.contains("DIO") || n.startsWith("1N"))      return SymbolKind::Diode;
-    if (n.contains("SW")  || c.contains("SWITCH"))   return SymbolKind::Switch;
-    if (c.contains("IC") || c.contains("74") || c.contains("40") ||
-        c.contains("MICRO") || c.contains("ANALOG"))
-        return SymbolKind::Ic;
+    if (n.contains("RESISTOR"))      return SymbolKind::Resistor;
+    if (n.contains("CAPACITOR"))     return SymbolKind::Capacitor;
+    if (n.contains("INDUCTOR"))      return SymbolKind::Inductor;
+    if (n.contains("GROUND"))        return SymbolKind::Ground;
+    if (n.contains("BATTERY"))       return SymbolKind::Battery;
+    if (n.contains("CLOCK"))         return SymbolKind::Clock;
+    if (n.contains("DC"))            return SymbolKind::DcSource;
+    if (n.contains("PUSH"))          return SymbolKind::PushButton;
+    if (n.contains("SWITCH"))        return SymbolKind::Switch;
+    if (n.contains("LED"))           return SymbolKind::Led;
+    if (n.contains("SEVEN") || n.contains("SEGMENT")) return SymbolKind::SevenSeg;
+    if (n.contains("FLIP"))          return SymbolKind::FlipFlop;
+    if (n.contains("AND") || n.contains("OR") || n.contains("NOT") ||
+        n.contains("NAND") || n.contains("NOR") || n.contains("XOR") || n.contains("XNOR"))
+        return SymbolKind::Gate;
     return SymbolKind::Generic;
 }
 
@@ -46,7 +52,7 @@ SymbolKind classify(const QString &name, const QString &category)
 
 // ---------------------------------------------------------------------
 // A tiny widget that sketches a schematic-like preview of the selected
-// device. This is intentionally simple - it is a hint, not a real render.
+// device. Intentionally simple - it is a hint, not a real render.
 // ---------------------------------------------------------------------
 class DevicePreviewWidget : public QWidget
 {
@@ -57,10 +63,10 @@ public:
         setStyleSheet("background-color:#EAE8DE; border:1px solid #A0A0A0;");
     }
 
-    void setDevice(const QString &name, const QString &category)
+    void setDevice(const QString &name)
     {
         m_name = name;
-        m_kind = name.isEmpty() ? SymbolKind::Generic : classify(name, category);
+        m_kind = name.isEmpty() ? SymbolKind::Generic : classify(name);
         update();
     }
 
@@ -103,35 +109,77 @@ protected:
             p.drawLine(-7, 18, 7, 18);
             p.drawLine(0, 18, 0, 40);
             break;
+        case SymbolKind::DcSource:
+            p.drawLine(0, -35, 0, -20);
+            p.drawLine(0, 20, 0, 35);
+            p.drawEllipse(-20, -20, 40, 40);
+            p.drawLine(-6, -10, 6, -10);
+            p.drawLine(0, -16, 0, -4);
+            p.drawLine(-6, 10, 6, 10);
+            break;
+        case SymbolKind::Clock:
+            p.setBrush(Qt::NoBrush);
+            p.drawRect(-20, -15, 40, 30);
+            {
+                QPolygon wave;
+                wave << QPoint(-14, 6) << QPoint(-14, -6) << QPoint(-4, -6)
+                     << QPoint(-4, 6)  << QPoint(6, 6)     << QPoint(6, -6)
+                     << QPoint(14, -6);
+                p.drawPolyline(wave);
+            }
+            p.drawLine(20, 0, 30, 0);
+            break;
         case SymbolKind::Ground:
             p.drawLine(0, -25, 0, 0);
             p.drawLine(-18, 0, 18, 0);
             p.drawLine(-11, 6, 11, 6);
             p.drawLine(-4, 12, 4, 12);
             break;
-        case SymbolKind::Diode:
+        case SymbolKind::Switch:
+            p.drawEllipse(QPoint(-25, 0), 3, 3);
+            p.drawEllipse(QPoint(25, 0), 3, 3);
+            p.drawLine(-22, 0, 22, 0);
+            p.drawLine(-22, 0, 18, -14);
+            break;
+        case SymbolKind::PushButton:
+            p.drawEllipse(QPoint(-25, 0), 3, 3);
+            p.drawEllipse(QPoint(25, 0), 3, 3);
+            p.drawLine(-22, 0, 22, 0);
+            p.drawLine(0, 0, 0, -12);
+            p.drawLine(-8, -12, 8, -12);
+            break;
         case SymbolKind::Led: {
             p.drawLine(-30, 0, -10, 0);
             QPolygon tri;
             tri << QPoint(-10, -14) << QPoint(-10, 14) << QPoint(10, 0);
-            p.setBrush(m_kind == SymbolKind::Led ? QColor("#ff6b6b") : Qt::black);
+            p.setBrush(QColor("#ff6b6b"));
             p.drawPolygon(tri);
             p.drawLine(10, -14, 10, 14);
             p.drawLine(10, 0, 30, 0);
             break;
         }
-        case SymbolKind::Switch:
-            p.drawEllipse(QPoint(-25, 0), 3, 3);
-            p.drawEllipse(QPoint(25, 0), 3, 3);
-            p.drawLine(-22, 0, 18, -14);
+        case SymbolKind::SevenSeg: {
+            p.setBrush(QColor(200, 40, 40));
+            p.drawRect(-18, -36, 36, 6);   // a
+            p.drawRect(16, -32, 6, 30);    // b
+            p.drawRect(16, 2, 6, 30);      // c
+            p.drawRect(-18, 32, 36, 6);    // d
+            p.drawRect(-22, 2, 6, 30);     // e
+            p.drawRect(-22, -32, 6, 30);   // f
+            p.drawRect(-18, -3, 36, 6);    // g
             break;
-        case SymbolKind::Ic:
-            p.setBrush(QColor("#dcdcdc"));
-            p.drawRect(-35, -25, 70, 50);
-            for (int i = 0; i < 4; ++i) {
-                p.drawLine(-35, -18 + i * 12, -45, -18 + i * 12);
-                p.drawLine(35, -18 + i * 12, 45, -18 + i * 12);
-            }
+        }
+        case SymbolKind::Gate:
+            p.setBrush(Qt::NoBrush);
+            p.drawLine(-40, 0, -20, 0);
+            p.drawLine(20, 0, 40, 0);
+            p.drawRoundedRect(-20, -20, 40, 40, 12, 12);
+            p.drawText(QRectF(-20, -20, 40, 40), Qt::AlignCenter, m_name.left(4));
+            break;
+        case SymbolKind::FlipFlop:
+            p.setBrush(Qt::NoBrush);
+            p.drawRect(-25, -25, 50, 50);
+            p.drawText(-18, 5, "DFF");
             break;
         default:
             p.setBrush(QColor("#dcdcdc"));
@@ -282,79 +330,53 @@ PickDevicesDialog::PickDevicesDialog(QWidget *parent) : QDialog(parent)
 }
 
 void PickDevicesDialog::addDevice(const QString &name, const QString &category,
-                                   const QString &subCategory, const QString &manufacturer,
-                                   const QString &description)
+                                  const QString &subCategory, const QString &manufacturer,
+                                  const QString &description)
 {
     database.append({name, category, subCategory, manufacturer, description});
 }
 
 void PickDevicesDialog::buildDatabase()
 {
-    // A small, representative subset of the Proteus device library.
-    // Where it makes sense, names line up with the concrete classes that
-    // already exist in Component.h (Resistor, Capacitor, Inductor, GND,
-    // Battery, DC_vol_source) so this can be wired to real instantiation
-    // later without renaming anything here.
+    // ------------------------------------------------------------------
+    // Only the components that actually exist in Component.h are listed
+    // here, grouped exactly like the sections of that file:
+    //   6.1 Primary Sources      -> GND, Battery, DC_vol_source, Clock_gen
+    //   6.2 Passive Parts        -> Resistor, Capacitor, Inductor
+    //   6.3 Interactive Parts    -> Switch, Push_button, LED, seven_seg
+    //   6.4 Logic Gates & FF     -> AND/OR/NOT/NAND/NOR/XOR/XNOR, DFlipFlop
+    //
+    // Every name below contains the exact keyword that
+    // schematicPage::onCanvasClicked() checks for, so selecting a device
+    // here and clicking on the canvas instantiates the real matching class.
+    // ------------------------------------------------------------------
 
-    addDevice("10WATT0R1",        "Resistors", "10 Watt Wirewound", "Vishay",  "10W 0.1R wirewound resistor");
-    addDevice("10WATT4K7",        "Resistors", "10 Watt Wirewound", "Vishay",  "10W 4.7k wirewound resistor");
-    addDevice("02013A0R5CAT2A",   "Resistors", "0.6W Metal Film",   "Yageo",   "0.6W metal film resistor");
-    addDevice("RES1K",            "Resistors", "2 Watt Metal Film", "Bourns",  "1k metal film resistor");
-    addDevice("RES10K",           "Resistors", "2 Watt Metal Film", "Bourns",  "10k metal film resistor");
-    addDevice("RES100",           "Resistors", "0.6W Metal Film",   "Yageo",   "100R metal film resistor");
-    addDevice("POT-HG",           "Resistors", "Potentiometers",    "Bourns",  "General purpose potentiometer");
+    // ---- 6.1 Primary Sources ----
+    addDevice("GROUND",             "Primary Sources", "Terminals", "(Unspecified)", "Ground / reference terminal");
+    addDevice("BATTERY",            "Primary Sources", "Sources",   "(Unspecified)", "Battery with internal resistance");
+    addDevice("DC VOLTAGE SOURCE",  "Primary Sources", "Sources",   "(Unspecified)", "Ideal DC voltage source");
+    addDevice("CLOCK GENERATOR",    "Primary Sources", "Sources",   "(Unspecified)", "Square-wave clock / signal generator");
 
-    addDevice("CAP",              "Capacitors", "Ceramic",      "Generic",   "Generic ceramic capacitor");
-    addDevice("CAP-ELEC",         "Capacitors", "Electrolytic", "Panasonic", "Electrolytic capacitor");
-    addDevice("CAP-TANT",         "Capacitors", "Tantalum",     "AVX",       "Tantalum capacitor");
-    addDevice("CAP-POLY",         "Capacitors", "Polyester",    "Vishay",    "Polyester film capacitor");
+    // ---- 6.2 Passive Parts ----
+    addDevice("RESISTOR",           "Passive Components", "Resistors",  "(Unspecified)", "Linear resistor");
+    addDevice("CAPACITOR",          "Passive Components", "Capacitors", "(Unspecified)", "Linear capacitor");
+    addDevice("INDUCTOR",           "Passive Components", "Inductors",  "(Unspecified)", "Linear inductor");
 
-    addDevice("INDUCTOR",         "Inductors", "Radial", "Bourns", "General purpose inductor");
-    addDevice("INDUCTOR-1UH",     "Inductors", "Radial", "Bourns", "1uH radial inductor");
-    addDevice("CHOKE",            "Inductors", "Axial",  "Vishay", "RF choke inductor");
+    // ---- 6.3 Interactive & Simple Output Parts ----
+    addDevice("SWITCH",             "Interactive Devices", "Switches", "(Unspecified)", "SPST toggle switch");
+    addDevice("PUSH BUTTON",        "Interactive Devices", "Switches", "(Unspecified)", "Momentary push button");
+    addDevice("LED",                "Interactive Devices", "Displays", "(Unspecified)", "Light emitting diode");
+    addDevice("SEVEN SEGMENT DISPLAY", "Interactive Devices", "Displays", "(Unspecified)", "7-segment display, common cathode");
 
-    addDevice("BATTERY",          "Simulator Primitives", "Sources", "(Unspecified)", "Ideal battery / DC voltage source");
-    addDevice("CELL",             "Simulator Primitives", "Sources", "(Unspecified)", "Single cell battery");
-    addDevice("DC-SOURCE",        "Simulator Primitives", "Sources", "(Unspecified)", "Ideal DC voltage source");
-    addDevice("GROUND",           "Miscellaneous", "Terminals", "(Unspecified)", "Ground / reference terminal");
-
-    addDevice("LED-RED",          "Optoelectronics", "LEDs", "Generic", "Red LED");
-    addDevice("LED-GREEN",        "Optoelectronics", "LEDs", "Generic", "Green LED");
-    addDevice("LED-YELLOW",       "Optoelectronics", "LEDs", "Generic", "Yellow LED");
-    addDevice("DIODE",            "Diodes", "Signal",    "ON Semiconductor", "Small-signal diode");
-    addDevice("1N4148",           "Diodes", "Signal",    "ON Semiconductor", "Fast switching diode");
-    addDevice("1N4001",           "Diodes", "Rectifier", "ON Semiconductor", "1A rectifier diode");
-
-    addDevice("SW-SPST",          "Switches & Relays", "Toggle",      "Generic", "Single pole single throw switch");
-    addDevice("SW-PB",            "Switches & Relays", "Push Button", "Generic", "Momentary push button");
-    addDevice("RELAY",            "Switches & Relays", "Relays",      "Omron",   "General purpose relay");
-
-    addDevice("7SEG-COM-CATHODE", "Optoelectronics", "7-Segment Displays", "Generic", "Common cathode 7-segment display");
-
-    addDevice("7400",             "TTL 74 series",    "Gates", "Texas Instruments", "Quad 2-input NAND gate");
-    addDevice("7404",             "TTL 74 series",    "Gates", "Texas Instruments", "Hex inverter");
-    addDevice("4001",             "CMOS 4000 series", "Gates", "Texas Instruments", "Quad 2-input NOR gate");
-    addDevice("4011",             "CMOS 4000 series", "Gates", "Texas Instruments", "Quad 2-input NAND gate");
-
-    addDevice("ATMEGA328P",       "Microprocessor ICs", "AVR",    "Microchip", "8-bit AVR microcontroller");
-    addDevice("ARDUINO UNO",      "Microprocessor ICs", "Boards", "Arduino",   "Arduino Uno development board");
-    addDevice("PIC16F877A",       "Microprocessor ICs", "PIC",    "Microchip", "8-bit PIC microcontroller");
-
-    addDevice("LM358",            "Analog ICs", "Op-Amps", "Texas Instruments", "Dual op-amp");
-    addDevice("LM741",            "Analog ICs", "Op-Amps", "Texas Instruments", "Single op-amp");
-    addDevice("NE555",            "Analog ICs", "Timers",  "Texas Instruments", "Precision timer IC");
-
-    addDevice("2N2222",           "Transistors", "NPN Bipolar", "ON Semiconductor", "General purpose NPN transistor");
-    addDevice("2N3906",           "Transistors", "PNP Bipolar", "ON Semiconductor", "General purpose PNP transistor");
-    addDevice("BC547",            "Transistors", "NPN Bipolar", "Fairchild",        "General purpose NPN transistor");
-
-    addDevice("CONN-SIL2",        "Connectors", "Headers", "Generic", "2 way pin header");
-    addDevice("CONN-SIL4",        "Connectors", "Headers", "Generic", "4 way pin header");
-    addDevice("USB-A",            "Connectors", "USB",     "Molex",   "USB Type-A connector");
-
-    addDevice("CRYSTAL",          "Miscellaneous", "Crystals",   "Generic",     "Quartz crystal resonator");
-    addDevice("FUSE",             "Miscellaneous", "Protection", "Littelfuse", "Fuse element");
-    addDevice("MOTOR",            "Miscellaneous", "Motors",     "Generic",     "DC motor");
+    // ---- 6.4 Digital Logic Gates & Flip-Flop ----
+    addDevice("AND GATE",           "Digital Logic", "Gates",      "(Unspecified)", "2-input AND gate");
+    addDevice("OR GATE",            "Digital Logic", "Gates",      "(Unspecified)", "2-input OR gate");
+    addDevice("NOT GATE",           "Digital Logic", "Gates",      "(Unspecified)", "Inverter (NOT gate)");
+    addDevice("NAND GATE",          "Digital Logic", "Gates",      "(Unspecified)", "2-input NAND gate");
+    addDevice("NOR GATE",           "Digital Logic", "Gates",      "(Unspecified)", "2-input NOR gate");
+    addDevice("XOR GATE",           "Digital Logic", "Gates",      "(Unspecified)", "2-input XOR gate");
+    addDevice("XNOR GATE",          "Digital Logic", "Gates",      "(Unspecified)", "2-input XNOR gate");
+    addDevice("D FLIP-FLOP",        "Digital Logic", "Flip-Flops", "(Unspecified)", "D-type flip-flop, rising-edge triggered");
 }
 
 void PickDevicesDialog::populateCategoryList()
@@ -367,7 +389,6 @@ void PickDevicesDialog::populateCategoryList()
 
     categoryList->clear();
     categoryList->addItem("(All Categories)");
-    categoryList->addItem("(Unspecified)");
     categoryList->addItems(categories);
 }
 
@@ -401,7 +422,6 @@ void PickDevicesDialog::populateManufacturerList()
 
     manufacturerList->clear();
     manufacturerList->addItem("(All Manufacturers)");
-    manufacturerList->addItem("(Unspecified)");
     manufacturerList->addItems(manufacturers);
     manufacturerList->setCurrentRow(0);
 }
@@ -452,7 +472,7 @@ void PickDevicesDialog::runSearch()
     QRegularExpression wordRegex;
     if (matchWholeWordsBox->isChecked() && !keyword.isEmpty()) {
         wordRegex = QRegularExpression("\\b" + QRegularExpression::escape(keyword) + "\\b",
-                                        QRegularExpression::CaseInsensitiveOption);
+                                       QRegularExpression::CaseInsensitiveOption);
     }
 
     QVector<DeviceInfo> matches;
@@ -475,8 +495,8 @@ void PickDevicesDialog::runSearch()
     }
 
     resultsHeaderLabel->setText(QString("Results (%1 %2):")
-                                     .arg(matches.size())
-                                     .arg(matches.size() == 1 ? "item" : "items"));
+                                    .arg(matches.size())
+                                    .arg(matches.size() == 1 ? "item" : "items"));
 
     resultsTable->setRowCount(matches.size());
     for (int i = 0; i < matches.size(); ++i) {
@@ -502,10 +522,9 @@ void PickDevicesDialog::onResultRowChanged()
         return;
     }
     const QString name = items.first()->text();
-    const QString category = items.first()->data(Qt::UserRole).toString();
     okButton->setEnabled(true);
     updatePreview(name);
-    previewWidget->setDevice(name, category);
+    previewWidget->setDevice(name);
 }
 
 void PickDevicesDialog::onResultActivated(int row, int)
@@ -514,7 +533,8 @@ void PickDevicesDialog::onResultActivated(int row, int)
     auto *item = resultsTable->item(row, 0);
     if (!item) return;
     m_selectedDevice = item->text();
-    emit deviceAccepted(m_selectedDevice);
+    const QString category = item->data(Qt::UserRole).toString();
+    emit deviceAccepted(m_selectedDevice, category);
     accept();
 }
 
@@ -522,7 +542,7 @@ void PickDevicesDialog::updatePreview(const QString &deviceName)
 {
     previewNameLabel->setText(deviceName);
     if (deviceName.isEmpty())
-        previewWidget->setDevice(QString(), QString());
+        previewWidget->setDevice(QString());
 }
 
 void PickDevicesDialog::onOkClicked()
@@ -530,6 +550,7 @@ void PickDevicesDialog::onOkClicked()
     const auto items = resultsTable->selectedItems();
     if (items.isEmpty()) return;
     m_selectedDevice = items.first()->text();
-    emit deviceAccepted(m_selectedDevice);
+    const QString category = items.first()->data(Qt::UserRole).toString();
+    emit deviceAccepted(m_selectedDevice, category);
     accept();
 }

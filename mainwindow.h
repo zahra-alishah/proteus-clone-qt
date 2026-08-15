@@ -23,6 +23,6 @@ private:
 
 private slots:
     void onNewProject();
-
+    void onOpenProject();
 };
 #endif // MAINWINDOW_H

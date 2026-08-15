@@ -27,6 +27,17 @@ struct DeviceInfo {
 // Mimics Proteus' "Pick Devices" dialog (opened with the 'P' shortcut / the
 // "Pick Parts" action). It searches an in-memory device database and lets
 // the user filter by keyword, category, sub-category and manufacturer.
+//
+// IMPORTANT: this database intentionally contains ONLY the components that
+// actually exist as classes in Component.h (GND, Battery, DC_vol_source,
+// Clock_gen, Resistor, Capacitor, Inductor, Switch, Push_button, LED,
+// seven_seg, ANDGate, ORGate, NOTGate, NANDGate, NORGate, XORGate,
+// XNORGate, DFlipFlop). Every device name here contains the exact keyword
+// that schematicPage::onCanvasClicked() looks for, so picking a device from
+// this dialog and clicking on the canvas will instantiate the matching real
+// Component subclass. Do not add devices here unless a matching class is
+// added to Component.h AND a matching keyword branch is added in
+// onCanvasClicked().
 class PickDevicesDialog : public QDialog
 {
     Q_OBJECT
@@ -37,8 +48,8 @@ public:
 
 signals:
     // Emitted once, right before the dialog closes with Accepted,
-    // carrying the name of the device the user picked.
-    void deviceAccepted(const QString &deviceName);
+    // carrying the name of the device the user picked and its category.
+    void deviceAccepted(const QString &deviceName, const QString &category);
 
 private slots:
     void onKeywordChanged(const QString &text);
@@ -52,7 +63,7 @@ private slots:
 private:
     void buildDatabase();
     void addDevice(const QString &name, const QString &category, const QString &subCategory,
-                    const QString &manufacturer, const QString &description = QString());
+                   const QString &manufacturer, const QString &description = QString());
 
     void populateCategoryList();
     void populateSubCategoryList();

@@ -7,17 +7,39 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    component.cpp \
+    componenteditdialog.cpp \
     main.cpp \
     mainwindow.cpp \
     schematicpage.cpp \
     shematicClass.cpp \
-    wizard.cpp
+    wire.cpp \
+    wirerouter.cpp \
+    wizard.cpp\
+    pin.cpp\
+    pickdevicesdialog.cpp\
+    placeddeviceitem.cpp\
+
+
+
 
 HEADERS += \
+    component.h \
+    componenteditdialog.h \
+    junction.h \
     mainwindow.h \
     schematicpage.h \
     shematicClass.h \
-    wizard.h
+    wire.h \
+    wirerouter.h \
+    wizard.h\
+    geometrytypes.h\
+    pin.h\
+    component.h\
+    pickdevicesdialog.h\
+    placeddeviceitem.h\
+    junction.h
+
 
 FORMS += \
     mainwindow.ui \
