@@ -71,5 +71,9 @@
         <file>icons/zoomOut.png</file>
         <file>icons/make.png</file>
         <file>icons/assign.png</file>
+        <file>icons/stop.png</file>
+        <file>icons/resume.png</file>
+        <file>icons/play.png</file>
+        <file>icons/pause.png</file>
     </qresource>
 </RCC>

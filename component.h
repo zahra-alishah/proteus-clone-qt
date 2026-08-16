@@ -12,10 +12,35 @@
 #include <QColor>
 #include <QRect>
 #include <QDebug>
-#include "geometrytypes.h"   // Position, Orientation, rotatePoint, mirrorPoint
-#include "pin.h"             // Pin, PinType
-
+#include "geometrytypes.h"
+#include "pin.h"
 using namespace std;
+
+
+enum class LogicState { Low, High, Undefined };
+
+class Logical {
+public:
+    static constexpr double HIGH_VOLTAGE = 5.0;
+    static constexpr double LOW_VOLTAGE = 0.0;
+    static constexpr double HIGH_THRESHOLD = 3.5;
+    static constexpr double LOW_THRESHOLD = 1.5;
+
+    static LogicState voltageToState(double voltage) {
+        if (voltage >= HIGH_THRESHOLD) return LogicState::High;
+        if (voltage <= LOW_THRESHOLD) return LogicState::Low;
+        return LogicState::Undefined;
+    }
+
+    static double stateToVoltage(LogicState s) {
+        return (s == LogicState::High) ? HIGH_VOLTAGE : LOW_VOLTAGE;
+    }
+
+    static void reportFloatingInput() {
+        qWarning("Floating input detected.");
+    }
+};
+
 
 
 class Component {
@@ -149,6 +174,22 @@ public:
         }
     }
 
+    virtual QVector<int> getOutputPinIndices() const { return {}; }
+    virtual int getPinValue(int pinIdx) const { Q_UNUSED(pinIdx); return -1; }
+
+    void setConnectedWire(int pinIdx, Wire* wire) {
+        if (pinIdx >= 0 && pinIdx < (int)m_connectedWires.size()) {
+            m_connectedWires[pinIdx] = wire;
+        }
+    }
+
+    Wire* getConnectedWire(int pinIdx) const {
+        if (pinIdx >= 0 && pinIdx < (int)m_connectedWires.size()) {
+            return m_connectedWires[pinIdx];
+        }
+        return nullptr;
+    }
+
 protected:
 
     void applyTransform(QPainter *painter) const {
@@ -165,6 +206,8 @@ protected:
     void addPin(const QString &name, PinType type, int localX, int localY) {
         pins.emplace_back(name, type, Position(localX, localY));
     }
+
+    std::vector<Wire*> m_connectedWires;
 };
 
 class Primary_source : public Component {
@@ -197,6 +240,9 @@ public:
         painter->restore();
         drawPins(painter);
     }
+
+    QVector<int> getOutputPinIndices() const override { return {0}; }
+    int getPinValue(int pinIdx) const override { Q_UNUSED(pinIdx); return 0; }
 };
 
 class DC_vol_source : public Primary_source {
@@ -230,6 +276,12 @@ public:
 
         painter->restore();
         drawPins(painter);
+    }
+
+    QVector<int> getOutputPinIndices() const override { return {0}; }
+    int getPinValue(int pinIdx) const override {
+        Q_UNUSED(pinIdx);
+        return Logical::voltageToState(voltage) == LogicState::High ? 1 : 0;
     }
 };
 
@@ -273,6 +325,12 @@ public:
 
         painter->restore();
         drawPins(painter);
+    }
+
+    QVector<int> getOutputPinIndices() const override { return {0}; }
+    int getPinValue(int pinIdx) const override {
+        Q_UNUSED(pinIdx);
+        return Logical::voltageToState(voltage) == LogicState::High ? 1 : 0;
     }
 };
 
@@ -333,6 +391,9 @@ public:
         painter->restore();
         drawPins(painter);
     }
+
+    QVector<int> getOutputPinIndices() const override { return {0}; }
+    int getPinValue(int pinIdx) const override { Q_UNUSED(pinIdx); return highLevel ? 1 : 0; }
 };
 
 // ============================================================================
@@ -725,30 +786,6 @@ public:
 // 6.4 Logical gate
 // ============================================================================
 
-enum class LogicState { Low, High, Undefined };
-
-class Logical {
-public:
-    static constexpr double HIGH_VOLTAGE = 5.0;
-    static constexpr double LOW_VOLTAGE = 0.0;
-    static constexpr double HIGH_THRESHOLD = 3.5;
-    static constexpr double LOW_THRESHOLD = 1.5;
-
-    static LogicState voltageToState(double voltage) {
-        if (voltage >= HIGH_THRESHOLD) return LogicState::High;
-        if (voltage <= LOW_THRESHOLD) return LogicState::Low;
-        return LogicState::Undefined;
-    }
-
-    static double stateToVoltage(LogicState s) {
-        return (s == LogicState::High) ? HIGH_VOLTAGE : LOW_VOLTAGE;
-    }
-
-    static void reportFloatingInput() {
-        qWarning("Floating input detected.");
-    }
-};
-
 class LogicGate : public Component {
 protected:
     double propagationDelay = 0.0;
@@ -799,6 +836,14 @@ public:
         if (outputState != LogicState::Undefined) {
             voltage = Logical::stateToVoltage(outputState);
         }
+    }
+
+    QVector<int> getOutputPinIndices() const override { return { numInputs }; }  // OUT is always last pin
+    int getPinValue(int pinIdx) const override {
+        if (pinIdx != numInputs) return -1;
+        if (outputState == LogicState::High) return 1;
+        if (outputState == LogicState::Low)  return 0;
+        return -1;
     }
 
 protected:
@@ -1271,6 +1316,16 @@ public:
 
         painter->restore();
         drawPins(painter);
+    }
+
+    QVector<int> getOutputPinIndices() const override { return {2, 3}; }
+    int getPinValue(int pinIdx) const override {
+        LogicState s = LogicState::Undefined;
+        if (pinIdx == 2) s = Q_state;
+        else if (pinIdx == 3) s = getQn();
+        if (s == LogicState::High) return 1;
+        if (s == LogicState::Low)  return 0;
+        return -1;
     }
 };
 

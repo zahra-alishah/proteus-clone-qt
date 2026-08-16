@@ -80,7 +80,21 @@ void Wire::draw(QPainter *painter) const
     if (m_path.size() < 2) return;
 
     painter->save();
-    QPen pen(m_selected ? QColor("#2f6fdb") : Qt::black, 2);
+
+    QColor penColor;
+    if (m_selected) {
+        penColor = QColor("#2f6fdb");
+    } else if (m_simStopped) {
+        penColor = m_defaultColor;
+    } else {
+        switch (m_logicLevel) {
+        case 1:  penColor = Qt::red;    break;
+        case 0:  penColor = Qt::blue;   break;
+        default: penColor = Qt::gray;   break;
+        }
+    }
+
+    QPen pen(penColor, 2);
     painter->setPen(pen);
 
     for (int i = 0; i < m_path.size() - 1; ++i) {
@@ -90,7 +104,7 @@ void Wire::draw(QPainter *painter) const
 
     if (m_isDangling) {
         painter->setPen(Qt::NoPen);
-        painter->setBrush(m_selected ? QColor("#2f6fdb") : Qt::black);
+        painter->setBrush(penColor);
         const Position &end = m_path.last();
         painter->drawEllipse(QPoint(end.x, end.y), 3, 3);
     }
@@ -121,4 +135,16 @@ bool Wire::isNear(const Position &pt, int tolerance) const
             return true;
     }
     return false;
+}
+
+void Wire::setLogicLevel(int level)
+{
+    m_logicLevel = level;
+    m_simStopped = false;
+}
+
+void Wire::resetColor()
+{
+    m_logicLevel = -1;
+    m_simStopped = true;
 }

@@ -11,6 +11,11 @@
 #include "wire.h"
 #include "junction.h"
 #include <QStringList>
+#include <QTimer>
+#include <QPushButton>
+#include <QLabel>
+
+
 namespace Ui {
 class schematicPage;
 }
@@ -101,6 +106,26 @@ private:
     void selectComponent(Component *c);
     void deselectComponent(Component *c);
 
+    QTimer *simTimer;
+    bool isRunning;
+    bool isPaused;
+    double simTime;
+
+    QPushButton *btnRun;
+    QPushButton *btnPause;
+    QPushButton *btnStop;
+    QPushButton *btnRestart;
+
+    QLabel *statusLabel;
+    QLabel *timeLabel;
+
+    void updateButtonStates();
+
+    Wire* findWireConnectedToPin(const Component* comp, int pinIdx) const;
+
+    void propagateLogicStates();
+    void updateWireColors();
+
 private slots:
     void onPickDevices();
     void onDeviceListItemClicked(QListWidgetItem *item);
@@ -116,6 +141,11 @@ private slots:
     void takeScreenshot();
     void undoAction();
     void redoAction();
+    void onRun();
+    void onStop();
+    void onRestart();
+    void onPause();
+    void advanceSimulation();
 
 };
 #endif // SCHEMATICPAGE_H

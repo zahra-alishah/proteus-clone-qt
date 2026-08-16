@@ -625,17 +625,12 @@ schematicPage::schematicPage(QWidget *parent)
     connect(actZoomOut, &QAction::triggered, schematicCanvas, &shematicClass::zoomOut);
     connect(actCenter, &QAction::triggered, schematicCanvas, &shematicClass::centerOnPage);
 
-    // Connect Escape key to perform an action
     connect(schematicCanvas, &shematicClass::escapePressed, this, [=](){
         qDebug() << "Escape pressed! Clearing selection...";
-        // In the future, add code here to clear whatever is currently selected
-        // e.g.: myScene->clearSelection();
     });
 
-    // Connect Delete/Backspace key to perform an action
     connect(schematicCanvas, &shematicClass::deleteKeyPressed, this, [=](){
         qDebug() << "Delete pressed! Removing selected item...";
-        // In the future, add code here to delete the selected component
     });
 
     QSplitter *splitter = new QSplitter(Qt::Horizontal);
@@ -644,7 +639,7 @@ schematicPage::schematicPage(QWidget *parent)
     QWidget *sidebar = new QWidget();
     QVBoxLayout *sideLayout = new QVBoxLayout(sidebar);
     sideLayout->setContentsMargins(2, 2, 2, 2);
-    sideLayout->setSpacing(2);
+    sideLayout->setSpacing(0);
 
     QToolButton *btnSelection = new QToolButton;
     QToolButton *btnComponent = new QToolButton;
@@ -1214,13 +1209,62 @@ schematicPage::schematicPage(QWidget *parent)
     bottomLayout->setContentsMargins(5, 2, 5, 2);
     bottomLayout->setSpacing(15);
 
-    QLabel *statusMessage = new QLabel("No Messages");
+    statusLabel = new QLabel("No Messages");
+    statusLabel->setStyleSheet("color: black;");
+    timeLabel = new QLabel("t = 0.000 s");
+    timeLabel->setStyleSheet("color: black; font-family: monospace; font-size: 12px;");
+    bottomLayout->addWidget(statusLabel);
+    bottomLayout->addWidget(timeLabel);
+
+    btnRun = new QPushButton();
+    btnRun->setToolTip("Run");
+    btnRun->setStyleSheet("color: black;");
+
+    btnPause = new QPushButton();
+    btnPause->setToolTip("Pause");
+    btnPause->setStyleSheet("color: black;");
+
+    btnStop = new QPushButton();
+    btnStop->setToolTip("Stop");
+    btnStop->setStyleSheet("color: black;");
+
+    btnRestart = new QPushButton();
+    btnRestart->setToolTip("Restart");
+    btnRestart->setStyleSheet("color: black;");
+
+
+    bottomLayout->insertWidget(0, btnRun);
+    bottomLayout->insertWidget(1, btnPause);
+    bottomLayout->insertWidget(2, btnStop);
+    bottomLayout->insertWidget(3, btnRestart);
+
+    connect(btnRun, &QPushButton::clicked, this, &schematicPage::onRun);
+    connect(btnPause, &QPushButton::clicked, this, &schematicPage::onPause);
+    connect(btnStop, &QPushButton::clicked, this, &schematicPage::onStop);
+    connect(btnRestart, &QPushButton::clicked, this, &schematicPage::onRestart);
+
+    btnRun->setIcon(QIcon(":/icons/play.png"));
+    btnPause->setIcon(QIcon(":/icons/pause.png"));
+    btnStop->setIcon(QIcon(":/icons/stop.png"));
+    btnRestart->setIcon(QIcon(":/icons/resume.png"));
+
+
+    simTimer = new QTimer(this);
+    simTimer->setInterval(50);
+    connect(simTimer, &QTimer::timeout, this, &schematicPage::advanceSimulation);
+
+    isRunning = false;
+    isPaused = false;
+    simTime = 0.0;
+
+    updateButtonStates();
+
     QLabel *sheetLabel = new QLabel("ROOT - Root sheet 1");
+    sheetLabel->setStyleSheet("color: black;");
     QLabel *coordsLabel = new QLabel("x: 0.0 y: 0.0");
     coordsLabel->setFixedWidth(100);
-    coordsLabel->setStyleSheet("font-family: monospace; font-size: 12px; color: #333;");
+    coordsLabel->setStyleSheet("font-family: monospace; font-size: 12px; color: #000000;");
 
-    bottomLayout->addWidget(statusMessage);
     bottomLayout->addWidget(sheetLabel);
     bottomLayout->addStretch();
     bottomLayout->addWidget(coordsLabel);
@@ -2442,5 +2486,143 @@ void schematicPage::saveProjectAs()
     } else {
         QMessageBox::warning(this, "Save Failed",
                              "Could not save the project file:\n" + path);
+    }
+}
+
+void schematicPage::updateButtonStates()
+{
+    btnRun->setEnabled(!isRunning || isPaused);
+    btnPause->setEnabled(isRunning && !isPaused);
+    btnStop->setEnabled(isRunning);
+    btnRestart->setEnabled(true);
+}
+
+void schematicPage::onRun()
+{
+    if (isRunning && isPaused) {
+        isPaused = false;
+        simTimer->start();
+        statusLabel->setText("Running...");
+    } else {
+        isRunning = true;
+        isPaused = false;
+        simTime = 0.0;
+        simTimer->start();
+        statusLabel->setText("Running...");
+    }
+    updateButtonStates();
+}
+
+void schematicPage::onPause()
+{
+    if (isRunning && !isPaused) {
+        isPaused = true;
+        simTimer->stop();
+        statusLabel->setText("Paused");
+        updateButtonStates();
+    }
+}
+
+void schematicPage::onStop()
+{
+    isRunning = false;
+    isPaused = false;
+    simTimer->stop();
+    simTime = 0.0;
+    statusLabel->setText("Stopped");
+    updateButtonStates();
+
+    for (Wire* w : wiresOnboard) {
+        w->resetColor();
+    }
+    if (schematicCanvas) schematicCanvas->update();
+}
+
+void schematicPage::onRestart()
+{
+    onStop();
+    onRun();
+}
+
+void schematicPage::advanceSimulation()
+{
+    double step = 0.01;
+    simTime += step;
+
+    timeLabel->setText(QString("t = %1 s").arg(simTime, 0, 'f', 3));
+
+    propagateLogicStates();
+    updateWireColors();
+
+    if (schematicCanvas) schematicCanvas->update();
+
+    if (simTime >= 10.0) onStop();
+}
+
+Wire* schematicPage::findWireConnectedToPin(const Component* comp, int pinIdx) const
+{
+    for (Wire* w : wiresOnboard) {
+        if (w->startComponent() == comp && w->startPinIndex() == pinIdx)
+            return w;
+        if (w->endComponent() == comp && w->endPinIndex() == pinIdx)
+            return w;
+    }
+    return nullptr;
+}
+
+void schematicPage::propagateLogicStates()
+{
+    const int maxPasses = componentsOnboard.size() + 1; // enough for feed-forward chains to settle
+
+    for (int pass = 0; pass < maxPasses; ++pass) {
+        for (Component *comp : componentsOnboard) {
+
+            if (auto *gate = dynamic_cast<LogicGate*>(comp)) {
+                for (int i = 0; i < gate->getNumInputs(); ++i) {
+                    LogicState s = LogicState::Undefined;
+                    Wire *w = findWireConnectedToPin(gate, i);
+                    if (w && !w->isDangling()) {
+                        Component *other = (w->startComponent() == gate) ? w->endComponent() : w->startComponent();
+                        int otherPin     = (w->startComponent() == gate) ? w->endPinIndex()   : w->startPinIndex();
+                        if (other) {
+                            int v = other->getPinValue(otherPin);
+                            s = (v == 1) ? LogicState::High : (v == 0) ? LogicState::Low : LogicState::Undefined;
+                        }
+                    }
+                    gate->setInputState(i, s);
+                }
+                gate->update(simTime);
+            }
+            else if (auto *dff = dynamic_cast<DFlipFlop*>(comp)) {
+                auto readPin = [&](int pinIdx) -> LogicState {
+                    Wire *w = findWireConnectedToPin(dff, pinIdx);
+                    if (!w || w->isDangling()) return LogicState::Undefined;
+                    Component *other = (w->startComponent() == dff) ? w->endComponent() : w->startComponent();
+                    int otherPin     = (w->startComponent() == dff) ? w->endPinIndex()   : w->startPinIndex();
+                    if (!other) return LogicState::Undefined;
+                    int v = other->getPinValue(otherPin);
+                    return (v == 1) ? LogicState::High : (v == 0) ? LogicState::Low : LogicState::Undefined;
+                };
+                dff->setD(readPin(0));
+                dff->setClock(readPin(1));
+                dff->evaluate();
+            }
+        }
+    }
+}
+
+void schematicPage::updateWireColors()
+{
+    for (Wire* w : wiresOnboard) w->resetColor();
+
+    for (Component* comp : componentsOnboard) {
+        QVector<int> outputs = comp->getOutputPinIndices();
+        for (int pinIdx : outputs) {
+            int value = comp->getPinValue(pinIdx);
+            Wire* wire = findWireConnectedToPin(comp, pinIdx);
+            if (wire) {
+                wire->setLogicLevel(value);
+            }
+        }
     }
 }

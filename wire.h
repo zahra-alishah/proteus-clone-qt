@@ -3,6 +3,9 @@
 #include <QVector>
 #include <QPainter>
 #include "geometrytypes.h"
+#include <QColor>
+
+
 class Component;
 
 
@@ -44,6 +47,10 @@ public:
     }
     const QVector<Position>& waypoints() const { return m_waypoints; }
 
+    void setLogicLevel(int level);
+    void resetColor();
+    int logicLevel() const { return m_logicLevel; }
+
 private:
     Component *m_startComponent = nullptr;
     int m_startPinIndex = -1;
@@ -60,8 +67,13 @@ private:
 
     const QVector<Component*> *m_allComponents = nullptr;
 
+    int m_logicLevel = -1;
+    bool m_simStopped = true;
+    QColor m_defaultColor = Qt::black;
+
     static double pointSegmentDistance(const Position &p, const Position &a, const Position &b);
     static void appendOrthogonal(QVector<Position> &path, const Position &from, const Position &to);
+
 };
 
 #endif // WIRE_H
