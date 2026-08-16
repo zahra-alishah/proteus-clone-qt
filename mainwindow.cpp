@@ -18,6 +18,7 @@
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QDir>
+#include <QKeyEvent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -32,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     myTabs->setTabsClosable(true);
 
     setCentralWidget(myTabs);
+    myTabs->installEventFilter(this);
 
     connect(myTabs, &QTabWidget::tabCloseRequested, myTabs, &QTabWidget::removeTab);
 
@@ -155,4 +157,17 @@ void MainWindow::onOpenProject()
         delete mySchematicPage;
         QMessageBox::warning(this, "Open Failed", "Could not read the project file:\n" + path);
     }
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == myTabs && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
+        if (keyEvent) {
+            if (keyEvent->key() == Qt::Key_Left || keyEvent->key() == Qt::Key_Right) {
+                return true;\
+            }
+        }
+    }
+    return QMainWindow::eventFilter(obj, event);
 }

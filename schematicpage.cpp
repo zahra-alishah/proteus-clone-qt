@@ -32,6 +32,11 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDialogButtonBox>
+#include <QIcon>
+#include <QGraphicsScene>
+#include <QPainter>
+#include <QMouseEvent>
+#include <QDebug>
 
 
 namespace {
@@ -481,7 +486,7 @@ schematicPage::schematicPage(QWidget *parent)
     actHelp->setShortcut(QKeySequence(Qt::Key_F1));
 
     QToolBar *myToolBar = new QToolBar(this);
-    myToolBar->setIconSize(QSize(28, 28));
+    myToolBar->setIconSize(QSize(20, 20));
     myToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
 
     QAction *actHome = editMenu->addAction("Home Page");
@@ -580,29 +585,58 @@ schematicPage::schematicPage(QWidget *parent)
     myToolBar->addSeparator();
     myToolBar->addAction(actRulesCheck);
 
-    actRedraw->setIcon(QIcon(":/icons/new.png"));
-    actGrid->setIcon(QIcon(":/icons/open-folder.png"));
-    actOrigin->setIcon(QIcon(":/icons/personal-data.png"));
-    actZoomAll->setIcon(QIcon(":/icons/open-folder.png"));
-    actZoomArea->setIcon(QIcon(":/icons/personal-data.png"));
-    actCut->setIcon(QIcon(":/icons/personal-data.png"));
-    actCopy->setIcon(QIcon(":/icons/open-folder.png"));
-    actPaste->setIcon(QIcon(":/icons/personal-data.png"));
+    actRedraw->setIcon(QIcon(":/icons/redraw.png"));
+    actGrid->setIcon(QIcon(":/icons/toggle.png"));
+    actOrigin->setIcon(QIcon(":/icons/toggleOff.png"));
+    actCenter->setIcon(QIcon(":/icons/center.png"));
+    actZoomIn->setIcon(QIcon(":/icons/zoomIn.png"));
+    actZoomOut->setIcon(QIcon(":/icons/zoomOut.png"));
+    actZoomAll->setIcon(QIcon(":/icons/zoomToEntire.png"));
+    actZoomArea->setIcon(QIcon(":/icons/zoomToArea.png"));
+    actUndo->setIcon(QIcon(":/icons/undo.png"));
+    actRedo->setIcon(QIcon(":/icons/redo.png"));
+    actCut->setIcon(QIcon(":/icons/cut.png"));
+    actCopy->setIcon(QIcon(":/icons/copy.png"));
+    actPaste->setIcon(QIcon(":/icons/paste.png"));
     actBlockCopy->setIcon(QIcon(":/icons/personal-data.png"));
-    actBlockMove->setIcon(QIcon(":/icons/personal-data.png"));
+    actBlockMove->setIcon(QIcon(":/icons/blockMove.png"));
     actBlockRotate->setIcon(QIcon(":/icons/open-folder.png"));
-    actBlockDelete->setIcon(QIcon(":/icons/personal-data.png"));
-    actPick->setIcon(QIcon(":/icons/personal-data.png"));
-    actMake->setIcon(QIcon(":/icons/personal-data.png"));
-    actPackaging->setIcon(QIcon(":/icons/open-folder.png"));
-    actDecompose->setIcon(QIcon(":/icons/personal-data.png"));
-    actWire->setIcon(QIcon(":/icons/personal-data.png"));
-    actSearch->setIcon(QIcon(":/icons/open-folder.png"));
-    actProp->setIcon(QIcon(":/icons/personal-data.png"));
-    actNewSheet->setIcon(QIcon(":/icons/personal-data.png"));
-    actRemove->setIcon(QIcon(":/icons/open-folder.png"));
-    actExitParent->setIcon(QIcon(":/icons/personal-data.png"));
-    actRulesCheck->setIcon(QIcon(":/icons/personal-data.png"));
+    actBlockDelete->setIcon(QIcon(":/icons/blockDelete.png"));
+    actPick->setIcon(QIcon(":/icons/pick.png"));
+    actMake->setIcon(QIcon(":/icons/make.png"));
+    actPackaging->setIcon(QIcon(":/icons/package.png"));
+    actDecompose->setIcon(QIcon(":/icons/decompose.png"));
+    actWire->setIcon(QIcon(":/icons/wire.png"));
+    actSearch->setIcon(QIcon(":/icons/search.png"));
+    actProp->setIcon(QIcon(":/icons/assign.png"));
+    actNewSheet->setIcon(QIcon(":/icons/newSheet.png"));
+    actRemove->setIcon(QIcon(":/icons/deleteSheet.png"));
+    actExitParent->setIcon(QIcon(":/icons/parents.png"));
+    actRulesCheck->setIcon(QIcon(":/icons/check.png"));
+
+    connect(actGrid, &QAction::triggered, this, [=]{
+        static int gridState = GridLines;
+        gridState = (gridState + 1) % 3;
+        schematicCanvas->setGridMode(gridState);
+    });
+
+    schematicCanvas = new shematicClass();
+    connect(actZoomIn, &QAction::triggered, schematicCanvas, &shematicClass::zoomIn);
+    connect(actZoomOut, &QAction::triggered, schematicCanvas, &shematicClass::zoomOut);
+    connect(actCenter, &QAction::triggered, schematicCanvas, &shematicClass::centerOnPage);
+
+    // Connect Escape key to perform an action
+    connect(schematicCanvas, &shematicClass::escapePressed, this, [=](){
+        qDebug() << "Escape pressed! Clearing selection...";
+        // In the future, add code here to clear whatever is currently selected
+        // e.g.: myScene->clearSelection();
+    });
+
+    // Connect Delete/Backspace key to perform an action
+    connect(schematicCanvas, &shematicClass::deleteKeyPressed, this, [=](){
+        qDebug() << "Delete pressed! Removing selected item...";
+        // In the future, add code here to delete the selected component
+    });
 
     QSplitter *splitter = new QSplitter(Qt::Horizontal);
     splitter->setHandleWidth(0);
@@ -783,6 +817,33 @@ schematicPage::schematicPage(QWidget *parent)
     btnXMirror->setToolTip("Mirror Horizontal");
     btnYMirror->setToolTip("Mirror Vertical");
 
+    btnSelection->setIcon(QIcon(":/icons/mouse.png"));
+    btnComponent->setIcon(QIcon(":/icons/symbol.png"));
+    btnJunctionDot->setIcon(QIcon(":/icons/junctiondot.png"));
+    btnWireLabel->setIcon(QIcon(":/icons/wirelabel.png"));
+    btnTextScript->setIcon(QIcon(":/icons/textscript.png"));
+    btnBuses->setIcon(QIcon(":/icons/buses.png"));
+    btnSubCircuit->setIcon(QIcon(":/icons/subcircuit.png"));
+    btnTerminals->setIcon(QIcon(":/icons/terminals.png"));
+    btnDevicePins->setIcon(QIcon(":/icons/devicepins.png"));
+    btnGraph->setIcon(QIcon(":/icons/graph.png"));
+    btnActivePopUp->setIcon(QIcon(":/icons/activepopup.png"));
+    btnGenerator->setIcon(QIcon(":/icons/generator.png"));
+    btnProbMode->setIcon(QIcon(":/icons/probemode.png"));
+    btnVirtualInstruments->setIcon(QIcon(":/icons/virtualinstruments.png"));
+    btn2DGraphicsLine->setIcon(QIcon(":/icons/2dgraphicsline.png"));
+    btn2DGraphicsBox->setIcon(QIcon(":/icons/2dgraphicsbox.png"));
+    btn2DGraphicsCircle->setIcon(QIcon(":/icons/2dgraphicscircle.png"));
+    btn2DGraphicsArc->setIcon(QIcon(":/icons/2dgraphicsarc.png"));
+    btn2DGraphicsClosedPath->setIcon(QIcon(":/icons/2dgraphicsclosedpath.png"));
+    btn2DGraphicsText->setIcon(QIcon(":/icons/2dgraphicstext.png"));
+    btn2DGraphicsSymbols->setIcon(QIcon(":/icons/2dgraphicssymbols.png"));
+    btn2DGraphicsMarkers->setIcon(QIcon(":/icons/2dgraphicsmarkers.png"));
+    btnRotateClockwise->setIcon(QIcon(":/icons/rotateclockwise.svg"));
+    btnRotateAntiClockwise->setIcon(QIcon(":/icons/rotateanticlockwise.svg"));
+    btnXMirror->setIcon(QIcon(":/icons/xmirror.svg"));
+    btnYMirror->setIcon(QIcon(":/icons/ymirror.svg"));
+
     // INDEX 0
     QWidget *widgetDevices = new QWidget();
     QVBoxLayout *layoutDevices = new QVBoxLayout(widgetDevices);
@@ -831,10 +892,16 @@ schematicPage::schematicPage(QWidget *parent)
     QLabel *headerTerminals = new QLabel("P    Terminals");
     headerTerminals->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutTerminals->addWidget(headerTerminals);
-    QComboBox *comboTerminals = new QComboBox();
-    comboTerminals->addItems({"DEFAULT", "INPUT", "OUTPUT", "BIDIR", "POWER", "GROUND", "CHASSIS", "RETURN", "DYNAMIC", "TESTPOINT", "NC"});
-    comboTerminals->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutTerminals->addWidget(comboTerminals);
+    QListWidget *listTerminals = new QListWidget();
+    listTerminals->addItems({"DEFAULT", "INPUT", "OUTPUT", "BIDIR", "POWER", "GROUND", "CHASSIS", "RETURN", "DYNAMIC", "TESTPOINT", "NC"});
+    listTerminals->setSelectionMode(QAbstractItemView::SingleSelection);
+    listTerminals->setCurrentRow(0);
+    listTerminals->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listTerminals->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }");
+    layoutTerminals->addWidget(listTerminals);
 
     modeStack->addWidget(widgetTerminals);
 
@@ -846,10 +913,16 @@ schematicPage::schematicPage(QWidget *parent)
     QLabel *headerPins = new QLabel("P    Pins");
     headerPins->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutPins->addWidget(headerPins);
-    QComboBox *comboPins = new QComboBox();
-    comboPins->addItems({"DEFAULT", "INVERT", "POSCLK", "NEGCLK", "SHORT", "BUS", "INSNEGOP"});
-    comboPins->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutPins->addWidget(comboPins);
+    QListWidget *listPins = new QListWidget();
+    listPins->addItems({"DEFAULT", "INVERT", "POSCLK", "NEGCLK", "SHORT", "BUS", "INSNEGOP"});
+    listPins->setSelectionMode(QAbstractItemView::SingleSelection);
+    listPins->setCurrentRow(0);
+    listPins->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listPins->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }");
+    layoutPins->addWidget(listPins);
 
     modeStack->addWidget(widgetPins);
 
@@ -861,10 +934,16 @@ schematicPage::schematicPage(QWidget *parent)
     QLabel *headerGraphs = new QLabel("Graphs");
     headerGraphs->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutGraphs->addWidget(headerGraphs);
-    QComboBox *comboGraphs = new QComboBox();
-    comboGraphs->addItems({"ANALOGUE", "DIGITAL", "MIXED", "FREQUENCY", "TRASFER", "NOISE", "DISTORTION", "BUSFOURIER", "INTERACTIVE", "CONFORMANCE", "DC SWEEP", "AC SWEEP"});
-    comboGraphs->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutGraphs->addWidget(comboGraphs);
+    QListWidget *listGraphs = new QListWidget();
+    listGraphs->addItems({"ANALOGUE", "DIGITAL", "MIXED", "FREQUENCY", "TRASFER", "NOISE", "DISTORTION", "BUSFOURIER", "INTERACTIVE", "CONFORMANCE", "DC SWEEP", "AC SWEEP"});
+    listGraphs->setSelectionMode(QAbstractItemView::SingleSelection);
+    listGraphs->setCurrentRow(0);
+    listGraphs->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listGraphs->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }");
+    layoutGraphs->addWidget(listGraphs);
 
     modeStack->addWidget(widgetGraphs);
 
@@ -876,10 +955,16 @@ schematicPage::schematicPage(QWidget *parent)
     QLabel *headerGenerators = new QLabel("Generators");
     headerGenerators->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutGenerators->addWidget(headerGenerators);
-    QComboBox *comboGenerators = new QComboBox();
-    comboGenerators->addItems({"C", "SIN", "PULSE", "EXP", "SFFM", "PWLIN", "FILE", "AUDIO", "RANDOM", "DSTATE", "DEDGE", "DPULSE", "DCLOCK", "DPATTERN", "SCRIPTABLE"});
-    comboGenerators->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutGenerators->addWidget(comboGenerators);
+    QListWidget *listGenerators = new QListWidget();
+    listGenerators->addItems({"C", "SIN", "PULSE", "EXP", "SFFM", "PWLIN", "FILE", "AUDIO", "RANDOM", "DSTATE", "DEDGE", "DPULSE", "DCLOCK", "DPATTERN", "SCRIPTABLE"});
+    listGenerators->setSelectionMode(QAbstractItemView::SingleSelection);
+    listGenerators->setCurrentRow(0);
+    listGenerators->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listGenerators->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }");
+    layoutGenerators->addWidget(listGenerators);
 
     modeStack->addWidget(widgetGenerators);
 
@@ -891,10 +976,16 @@ schematicPage::schematicPage(QWidget *parent)
     QLabel *headerProbes = new QLabel("Probes");
     headerProbes->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutProbes->addWidget(headerProbes);
-    QComboBox *comboProbes = new QComboBox();
-    comboProbes->addItems({"VOLTAGE", "CURRENT", "TAPE"});
-    comboProbes->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutProbes->addWidget(comboProbes);
+    QListWidget *listProbes = new QListWidget();
+    listProbes->addItems({"VOLTAGE", "CURRENT", "TAPE"});
+    listProbes->setSelectionMode(QAbstractItemView::SingleSelection);
+    listProbes->setCurrentRow(0);
+    listProbes->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listProbes->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }");
+    layoutProbes->addWidget(listProbes);
 
     modeStack->addWidget(widgetProbes);
 
@@ -906,10 +997,16 @@ schematicPage::schematicPage(QWidget *parent)
     QLabel *headerInstruments = new QLabel("Instruments");
     headerInstruments->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutInstruments->addWidget(headerInstruments);
-    QComboBox *comboInstruments = new QComboBox();
-    comboInstruments->addItems({"OSCILLISCOPE", "LOGIC ANALYSER", "COUNTER TIMER", "VIRTUAL TERMINAL", "SPI DEBUGGER", "I2C DEBUGGER", "SIGNAL GENERATOR", "PATTERN GENERATOR", "DC VOLTMETER", "DC AMMETER", "AC VOLTMETER", "AC AMMETER", "WATTMETER"});
-    comboInstruments->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutInstruments->addWidget(comboInstruments);
+    QListWidget *listInstruments = new QListWidget();
+    listInstruments->addItems({"OSCILLISCOPE", "LOGIC ANALYSER", "COUNTER TIMER", "VIRTUAL TERMINAL", "SPI DEBUGGER", "I2C DEBUGGER", "SIGNAL GENERATOR", "PATTERN GENERATOR", "DC VOLTMETER", "DC AMMETER", "AC VOLTMETER", "AC AMMETER", "WATTMETER"});
+    listInstruments->setSelectionMode(QAbstractItemView::SingleSelection);
+    listInstruments->setCurrentRow(0);
+    listInstruments->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listInstruments->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }");
+    layoutInstruments->addWidget(listInstruments);
 
     modeStack->addWidget(widgetInstruments);
 
@@ -921,10 +1018,16 @@ schematicPage::schematicPage(QWidget *parent)
     QLabel *headerGraphics = new QLabel("C E  Graphics");
     headerGraphics->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutGraphics->addWidget(headerGraphics);
-    QComboBox *comboGraphics = new QComboBox();
-    comboGraphics->addItems({"COMPONENT", "PIN", "PORT", "MARKER", "ACTUATOR", "INDICATOR", "VPROBE", "IPROBE", "TAPE", "GENERATOR", "TERMINAL", "SUBCIRCUIT", "2D GRAPHIC", "WIRE DOT", "WIRE", "BUS WIRE", "BORDER", "TEMPLATE"});
-    comboGraphics->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutGraphics->addWidget(comboGraphics);
+    QListWidget *listGraphics = new QListWidget();
+    listGraphics->addItems({"COMPONENT", "PIN", "PORT", "MARKER", "ACTUATOR", "INDICATOR", "VPROBE", "IPROBE", "TAPE", "GENERATOR", "TERMINAL", "SUBCIRCUIT", "2D GRAPHIC", "WIRE DOT", "WIRE", "BUS WIRE", "BORDER", "TEMPLATE"});
+    listGraphics->setSelectionMode(QAbstractItemView::SingleSelection);
+    listGraphics->setCurrentRow(0);
+    listGraphics->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listGraphics->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }");
+    layoutGraphics->addWidget(listGraphics);
 
     modeStack->addWidget(widgetGraphics);
 
@@ -936,10 +1039,16 @@ schematicPage::schematicPage(QWidget *parent)
     QLabel *headerMarkers = new QLabel("Markers");
     headerMarkers->setStyleSheet("background-color: #b7d5f5; font-weight: bold; padding: 2px;");
     layoutMarkers->addWidget(headerMarkers);
-    QComboBox *comboMarkers = new QComboBox();
-    comboMarkers->addItems({"ORIGIN", "NODE", "BUSNODE", "LABEL", "DEVICEREF", "DEVICEVAL", "PINNAME", "PINNUM", "INCREMENT", "DECREMENT", "TOGGLE", "GRID"});
-    comboMarkers->setStyleSheet("QComboBox { background-color: white; border: none; padding: 4px; }");
-    layoutMarkers->addWidget(comboMarkers);
+    QListWidget *listMarkers = new QListWidget();
+    listMarkers->addItems({"ORIGIN", "NODE", "BUSNODE", "LABEL", "DEVICEREF", "DEVICEVAL", "PINNAME", "PINNUM", "INCREMENT", "DECREMENT", "TOGGLE", "GRID"});
+    listMarkers->setSelectionMode(QAbstractItemView::SingleSelection);
+    listMarkers->setCurrentRow(0);
+    listMarkers->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    listMarkers->setStyleSheet(
+        "QListWidget { background-color: white; color: black; border: none; }"
+        "QListWidget::item { color: black; }"
+        "QListWidget::item:selected { background-color: #4a90e2; color: white; }");
+    layoutMarkers->addWidget(listMarkers);
 
     modeStack->addWidget(widgetMarkers);
 
@@ -1046,7 +1155,6 @@ schematicPage::schematicPage(QWidget *parent)
     sideLayout->addWidget(btnYMirror);
 
     // --- Build the canvas and bottom bar ---
-    schematicCanvas = new shematicClass();
     schematicCanvas->setMouseTracking(true);
     schematicCanvas->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -2102,7 +2210,6 @@ void schematicPage::pushUndoState()
 {
     QString snapshot = serializeCurrentStateToString();
 
-    // اگه از وسط تاریخچه یک تغییر جدید انجام بشه، redo های بعدش باطل میشن
     while (undoHistory.size() > historyIndex + 1) {
         undoHistory.removeLast();
     }
@@ -2258,8 +2365,7 @@ void schematicPage::openProject()
     ? projectsDirectory()
     : QFileInfo(currentProjectPath).absolutePath();
 
-    QString path = QFileDialog::getOpenFileName(this, "Open Project", startDir,
-                                                "Proteus Mini Project (*.txt)");
+    QString path = QFileDialog::getOpenFileName(this, "Open Project", startDir, "Proteus Mini Project (*.txt)");
     if (path.isEmpty()) return;
 
     if (!loadProjectFile(path)) {
@@ -2287,11 +2393,9 @@ void schematicPage::takeScreenshot()
 
     QPixmap pixmap = schematicCanvas->grab();
 
-    QString defaultPath = projectsDirectory() + "/" +
-                          (currentProjectName.isEmpty() ? "schematic" : currentProjectName) + ".png";
+    QString defaultPath = projectsDirectory() + "/" + (currentProjectName.isEmpty() ? "schematic" : currentProjectName) + ".png";
 
-    QString path = QFileDialog::getSaveFileName(this, "Save Screenshot", defaultPath,
-                                                "PNG Image (*.png);;JPEG Image (*.jpg)");
+    QString path = QFileDialog::getSaveFileName(this, "Save Screenshot", defaultPath, "PNG Image (*.png);;JPEG Image (*.jpg)");
     if (path.isEmpty()) return;
 
     if (!pixmap.save(path)) {

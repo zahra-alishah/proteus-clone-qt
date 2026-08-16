@@ -24,5 +24,8 @@ private:
 private slots:
     void onNewProject();
     void onOpenProject();
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 };
 #endif // MAINWINDOW_H

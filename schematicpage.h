@@ -29,6 +29,7 @@ public:
     explicit schematicPage(QWidget *parent = nullptr);
     ~schematicPage();
     bool loadProjectFile(const QString &path);
+
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 private:

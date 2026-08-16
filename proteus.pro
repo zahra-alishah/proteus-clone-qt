@@ -61,3 +61,5 @@ RESOURCES += \
 
 DISTFILES += \
     .gitignore
+
+QT += svg

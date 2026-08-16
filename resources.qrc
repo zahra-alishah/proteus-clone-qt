@@ -18,5 +18,58 @@
         <file>icons/explorer.png</file>
         <file>icons/new.png</file>
         <file>icons/proteus.svg</file>
+        <file>icons/2dgraphicsarc.png</file>
+        <file>icons/2dgraphicsbox.png</file>
+        <file>icons/2dgraphicscircle.png</file>
+        <file>icons/2dgraphicsline.png</file>
+        <file>icons/buses.png</file>
+        <file>icons/cursor.png</file>
+        <file>icons/generator.png</file>
+        <file>icons/graph.png</file>
+        <file>icons/junctiondot.png</file>
+        <file>icons/probemode.png</file>
+        <file>icons/rotateclockwise.svg</file>
+        <file>icons/rotateanticlockwise.svg</file>
+        <file>icons/subcircuit.png</file>
+        <file>icons/textscript.png</file>
+        <file>icons/virtualinstruments.png</file>
+        <file>icons/wirelabel.png</file>
+        <file>icons/ymirror.svg</file>
+        <file>icons/xmirror.svg</file>
+        <file>icons/mouse.png</file>
+        <file>icons/mouse2.png</file>
+        <file>icons/2dgraphicsmarkers.png</file>
+        <file>icons/2dgraphicssymbols.png</file>
+        <file>icons/2dgraphicstext.png</file>
+        <file>icons/2dgraphicsclosedpath.png</file>
+        <file>icons/terminals.png</file>
+        <file>icons/devicepins.png</file>
+        <file>icons/activepopup.png</file>
+        <file>icons/zoomToEntire.png</file>
+        <file>icons/zoomToArea.png</file>
+        <file>icons/zoomIn.png</file>
+        <file>icons/wire.png</file>
+        <file>icons/blockMove.png</file>
+        <file>icons/blockDelete.png</file>
+        <file>icons/check.png</file>
+        <file>icons/center.png</file>
+        <file>icons/copy.png</file>
+        <file>icons/deleteSheet.png</file>
+        <file>icons/decompose.png</file>
+        <file>icons/cut.png</file>
+        <file>icons/newSheet.png</file>
+        <file>icons/parents.png</file>
+        <file>icons/package.png</file>
+        <file>icons/paste.png</file>
+        <file>icons/pick.png</file>
+        <file>icons/redraw.png</file>
+        <file>icons/redo.png</file>
+        <file>icons/search.png</file>
+        <file>icons/undo.png</file>
+        <file>icons/toggleOff.png</file>
+        <file>icons/toggle.png</file>
+        <file>icons/zoomOut.png</file>
+        <file>icons/make.png</file>
+        <file>icons/assign.png</file>
     </qresource>
 </RCC>
