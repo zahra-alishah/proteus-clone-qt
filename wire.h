@@ -49,7 +49,11 @@ public:
 
     void setLogicLevel(int level);
     void resetColor();
+    void clearLogicLevel();
+    void setSimRunning(bool running) { m_simStopped = !running; }
     int logicLevel() const { return m_logicLevel; }
+
+    QString probeVoltageLabel() const;
 
 private:
     Component *m_startComponent = nullptr;

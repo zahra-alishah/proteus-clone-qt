@@ -77,7 +77,6 @@ public:
         }
     }
 
-
     void mirrorHorizontal() { flipX = !flipX; }
     void mirrorVertical()   { flipY = !flipY; }
     bool isMirroredHorizontal() const { return flipX; }
@@ -176,6 +175,9 @@ public:
 
     virtual QVector<int> getOutputPinIndices() const { return {}; }
     virtual int getPinValue(int pinIdx) const { Q_UNUSED(pinIdx); return -1; }
+
+    double getComponentVoltage() const { return voltage; }
+    double getComponentCurrent() const { return current; }
 
     void setConnectedWire(int pinIdx, Wire* wire) {
         if (pinIdx >= 0 && pinIdx < (int)m_connectedWires.size()) {

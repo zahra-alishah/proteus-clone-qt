@@ -148,3 +148,18 @@ void Wire::resetColor()
     m_logicLevel = -1;
     m_simStopped = true;
 }
+
+void Wire::clearLogicLevel()
+{
+    m_logicLevel = -1;
+}
+
+QString Wire::probeVoltageLabel() const
+{
+    if (m_simStopped) return "N/A";
+    switch (m_logicLevel) {
+    case 1:  return "5.00 V";
+    case 0:  return "0.00 V";
+    default: return "Undefined";
+    }
+}

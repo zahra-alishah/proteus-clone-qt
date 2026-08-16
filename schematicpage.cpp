@@ -37,7 +37,7 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QDebug>
-
+#include <QScrollBar>
 
 namespace {
 
@@ -74,9 +74,14 @@ public:
                               QVector<Junction*> *junctions,
                               bool *previewActive,
                               QVector<Position> *previewPath,
+                              shematicClass *view,
+                              bool *probeActive,
+                              QString *probeText,
+                              Position *probePos,
                               QWidget *parent = nullptr)
         : QWidget(parent), m_components(components), m_wires(wires), m_junctions(junctions),
-        m_previewActive(previewActive), m_previewPath(previewPath)
+        m_previewActive(previewActive), m_previewPath(previewPath), m_view(view),
+        m_probeActive(probeActive), m_probeText(probeText), m_probePos(probePos)
     {
         setAttribute(Qt::WA_TransparentForMouseEvents);
         setAttribute(Qt::WA_NoSystemBackground);
@@ -92,6 +97,10 @@ protected:
         Q_UNUSED(event);
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
+
+        if (m_view) {
+            painter.setTransform(m_view->viewportTransform());
+        }
 
         if (m_wires) {
             for (Wire *w : *m_wires) {
@@ -145,6 +154,18 @@ protected:
             painter.drawRect(m_rubberBandRect.normalized());
             painter.restore();
         }
+
+        if (m_probeActive && *m_probeActive && m_view && m_probeText && m_probePos) {
+            painter.save();
+            painter.resetTransform();
+            QPoint screenPt = m_view->mapFromScene(QPointF(m_probePos->x, m_probePos->y));
+            QRect labelRect(screenPt.x() + 8, screenPt.y() - 22, 74, 20);
+            painter.setBrush(QColor(255, 255, 180));
+            painter.setPen(QPen(Qt::black, 1));
+            painter.drawRect(labelRect);
+            painter.drawText(labelRect, Qt::AlignCenter, *m_probeText);
+            painter.restore();
+        }
     }
 
 private:
@@ -153,7 +174,11 @@ private:
     QVector<Junction*> *m_junctions;
     bool *m_previewActive;
     QVector<Position> *m_previewPath;
+    shematicClass *m_view = nullptr;
     QRect m_rubberBandRect;
+    bool *m_probeActive;
+    QString *m_probeText;
+    Position *m_probePos;
 };
 
 QString chooseProjectDialog(QWidget *parent, const QString &dir)
@@ -621,9 +646,25 @@ schematicPage::schematicPage(QWidget *parent)
     });
 
     schematicCanvas = new shematicClass();
-    connect(actZoomIn, &QAction::triggered, schematicCanvas, &shematicClass::zoomIn);
-    connect(actZoomOut, &QAction::triggered, schematicCanvas, &shematicClass::zoomOut);
-    connect(actCenter, &QAction::triggered, schematicCanvas, &shematicClass::centerOnPage);
+    connect(actZoomIn, &QAction::triggered, this, [this]() {
+        schematicCanvas->zoomIn();
+        if (componentOverlay) componentOverlay->update();
+    });
+    connect(actZoomOut, &QAction::triggered, this, [this]() {
+        schematicCanvas->zoomOut();
+        if (componentOverlay) componentOverlay->update();
+    });
+    connect(actCenter, &QAction::triggered, this, [this]() {
+        schematicCanvas->centerOnPage();
+        if (componentOverlay) componentOverlay->update();
+    });
+
+    connect(schematicCanvas->horizontalScrollBar(), &QScrollBar::valueChanged, this, [this]() {
+        if (componentOverlay) componentOverlay->update();
+    });
+    connect(schematicCanvas->verticalScrollBar(), &QScrollBar::valueChanged, this, [this]() {
+        if (componentOverlay) componentOverlay->update();
+    });
 
     connect(schematicCanvas, &shematicClass::escapePressed, this, [=](){
         qDebug() << "Escape pressed! Clearing selection...";
@@ -975,6 +1016,9 @@ schematicPage::schematicPage(QWidget *parent)
     listProbes->addItems({"VOLTAGE", "CURRENT", "TAPE"});
     listProbes->setSelectionMode(QAbstractItemView::SingleSelection);
     listProbes->setCurrentRow(0);
+    connect(listProbes, &QListWidget::currentRowChanged, this, [this](int row) {
+        selectedProbeType = (row == 1) ? "CURRENT" : "VOLTAGE";
+    });
     listProbes->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     listProbes->setStyleSheet(
         "QListWidget { background-color: white; color: black; border: none; }"
@@ -1084,7 +1128,14 @@ schematicPage::schematicPage(QWidget *parent)
     });
 
     connect(btnProbMode, &QToolButton::toggled, this, [=](bool checked) {
-        if (checked) modeStack->setCurrentIndex(6);
+        if (checked) {
+            modeStack->setCurrentIndex(6);
+            interactionMode = InteractionMode::Probing;
+        } else if (interactionMode == InteractionMode::Probing) {
+            interactionMode = InteractionMode::Idle;
+            probeDisplayActive = false;
+            if (componentOverlay) componentOverlay->update();
+        }
     });
 
     connect(btnVirtualInstruments, &QToolButton::toggled, this, [=](bool checked) {
@@ -1153,13 +1204,11 @@ schematicPage::schematicPage(QWidget *parent)
     schematicCanvas->setMouseTracking(true);
     schematicCanvas->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    componentOverlay = new ComponentOverlay(&componentsOnboard, &wiresOnboard, &junctionsOnboard,
-                                            &wiringPreviewActive, &wiringPreviewPath, schematicCanvas);
-    componentOverlay->setGeometry(schematicCanvas->rect());
+    componentOverlay = new ComponentOverlay(&componentsOnboard, &wiresOnboard, &junctionsOnboard, &wiringPreviewActive, &wiringPreviewPath, schematicCanvas, &probeDisplayActive, &probeDisplayText, &probeDisplayPos, schematicCanvas->viewport());    componentOverlay->setGeometry(schematicCanvas->viewport()->rect());
     componentOverlay->raise();
     componentOverlay->show();
 
-    schematicCanvas->installEventFilter(this);
+    schematicCanvas->viewport()->installEventFilter(this);
 
     connect(schematicCanvas, &shematicClass::canvasClicked,
             this, &schematicPage::onCanvasClicked);
@@ -1485,6 +1534,39 @@ void schematicPage::updatePinHover(const QPointF &scenePos)
     }
 }
 
+void schematicPage::updateProbeAt(const QPointF &scenePos)
+{
+    Position p(qRound(scenePos.x()), qRound(scenePos.y()));
+
+    Component *comp = nullptr;
+    int pinIdx = -1;
+    if (findPinAt(scenePos, comp, pinIdx)) {
+        if (selectedProbeType == "CURRENT") {
+            probeDisplayText = QString("%1 A").arg(comp->getComponentCurrent(), 0, 'f', 3);
+        } else {
+            probeDisplayText = QString("%1 V").arg(comp->getComponentVoltage(), 0, 'f', 2);
+        }
+        probeDisplayPos = comp->getPinScenePosition(pinIdx);
+        probeDisplayActive = true;
+        if (componentOverlay) componentOverlay->update();
+        return;
+    }
+
+    Wire *w = findWireNear(scenePos);
+    if (w) {
+        probeDisplayText = (selectedProbeType == "CURRENT") ? "N/A" : w->probeVoltageLabel();
+        probeDisplayPos = p;
+        probeDisplayActive = true;
+        if (componentOverlay) componentOverlay->update();
+        return;
+    }
+
+    if (probeDisplayActive) {
+        probeDisplayActive = false;
+        if (componentOverlay) componentOverlay->update();
+    }
+}
+
 void schematicPage::recalcAllWires()
 {
     for (Wire *w : wiresOnboard) {
@@ -1544,6 +1626,9 @@ bool schematicPage::findWireIntersectionNear(const QPointF &scenePos, Position &
 
 void schematicPage::onCanvasClicked(QPointF pos, Qt::KeyboardModifiers modifiers)
 {
+    if (interactionMode == InteractionMode::Probing) {
+        return;
+    }
 
     if (!selectedComponentType.isEmpty()) {
         clearSelection();
@@ -1708,6 +1793,10 @@ void schematicPage::onCanvasDragMoved(QPointF scenePos, bool leftButtonDown)
 
     updatePinHover(scenePos);
 
+    if (interactionMode == InteractionMode::Probing) {
+        updateProbeAt(scenePos);
+    }
+
     if (interactionMode == InteractionMode::Wiring && wireStartComponent) {
         Position mouse(qRound(scenePos.x()), qRound(scenePos.y()));
         wiringPreviewPath = buildWiringPreviewPath(mouse);
@@ -1784,9 +1873,9 @@ void schematicPage::onCanvasReleased(QPointF scenePos)
 
 bool schematicPage::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched == schematicCanvas && event->type() == QEvent::Resize) {
+    if (watched == schematicCanvas->viewport() && event->type() == QEvent::Resize) {
         if (componentOverlay)
-            componentOverlay->setGeometry(schematicCanvas->rect());
+            componentOverlay->setGeometry(schematicCanvas->viewport()->rect());
     }
     return QWidget::eventFilter(watched, event);
 }
@@ -2399,9 +2488,6 @@ Component* schematicPage::createComponentFromCode(const QString &code, const QSt
     return nullptr;
 }
 
-
-
-
 // ---- Open: ----
 void schematicPage::openProject()
 {
@@ -2613,7 +2699,10 @@ void schematicPage::propagateLogicStates()
 
 void schematicPage::updateWireColors()
 {
-    for (Wire* w : wiresOnboard) w->resetColor();
+    for (Wire* w : wiresOnboard) {
+        w->clearLogicLevel();
+        w->setSimRunning(true);
+    }
 
     for (Component* comp : componentsOnboard) {
         QVector<int> outputs = comp->getOutputPinIndices();

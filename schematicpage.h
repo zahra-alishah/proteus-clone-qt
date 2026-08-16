@@ -45,7 +45,7 @@ private:
     Push_button *pressedPushButton = nullptr;
     shematicClass *schematicCanvas = nullptr;
     QWidget *componentOverlay = nullptr;
-    enum class InteractionMode { Idle, RubberBandSelecting, MovingComponents, Wiring };
+    enum class InteractionMode { Idle, RubberBandSelecting, MovingComponents, Wiring, Probing };
     InteractionMode interactionMode = InteractionMode::Idle;
     QVector<Component*> selectedComponents;
     QPointF dragAnchorScenePos;
@@ -60,6 +60,10 @@ private:
     QVector<Position> wireWaypoints;
     bool wiringPreviewActive = false;
     QVector<Position> wiringPreviewPath;
+    QString selectedProbeType = "VOLTAGE";
+    bool probeDisplayActive = false;
+    QString probeDisplayText;
+    Position probeDisplayPos;
     Component *hoveredPinComponent = nullptr;
     int hoveredPinIndex = -1;
     QString currentProjectName;
@@ -89,6 +93,7 @@ private:
     void updateUndoRedoActions();
 
     void updatePinHover(const QPointF &scenePos);
+    void updateProbeAt(const QPointF &scenePos);
     void recalcAllWires();
     void pruneJunctions();
     Wire* findWireNear(const QPointF &scenePos) const;
