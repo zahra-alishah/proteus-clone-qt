@@ -1685,6 +1685,10 @@ void schematicPage::onCanvasClicked(QPointF pos, Qt::KeyboardModifiers modifiers
             newComp = new Battery(12.0, 0.1);
         else if (type.contains("CLOCK"))
             newComp = new Clock_gen(5.0, 1.0);
+        else if (type.contains("ADC"))
+            newComp = new ADC(8, 0.0);
+        else if (type.contains("DAC"))
+            newComp = new DAC(8, 0.0);
         else if (type.contains("DC"))
             newComp = new DC_vol_source(5.0);
         else if (type.contains("RESISTOR"))
@@ -1723,10 +1727,6 @@ void schematicPage::onCanvasClicked(QPointF pos, Qt::KeyboardModifiers modifiers
             newComp = new NOTGate();
         else if (type.contains("FLIP") || type.contains("DFF") || type.contains("DTFF") || type.contains("D-FF"))
             newComp = new DFlipFlop();
-        else if (type.contains("ADC"))
-            newComp = new ADC(8, 0.0);
-        else if (type.contains("DAC"))
-            newComp = new DAC(8, 0.0);
 
 
         if (newComp) {
