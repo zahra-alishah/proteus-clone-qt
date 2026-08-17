@@ -49,11 +49,13 @@ public:
 
     void setLogicLevel(int level);
     void resetColor();
-    void clearLogicLevel();
-    void setSimRunning(bool running) { m_simStopped = !running; }
+    void setAnalogVoltage(double v) { m_analogVoltage = v; m_hasAnalogVoltage = true; }
+    void clearAnalogVoltage() { m_hasAnalogVoltage = false; }
+    bool hasAnalogVoltage() const { return m_hasAnalogVoltage; }
     int logicLevel() const { return m_logicLevel; }
 
     QString probeVoltageLabel() const;
+    double effectiveVoltage(bool &valid) const;
 
 private:
     Component *m_startComponent = nullptr;
@@ -74,6 +76,8 @@ private:
     int m_logicLevel = -1;
     bool m_simStopped = true;
     QColor m_defaultColor = Qt::black;
+    double m_analogVoltage = 0.0;
+    bool m_hasAnalogVoltage = false;
 
     static double pointSegmentDistance(const Position &p, const Position &a, const Position &b);
     static void appendOrthogonal(QVector<Position> &path, const Position &from, const Position &to);

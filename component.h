@@ -175,6 +175,8 @@ public:
 
     virtual QVector<int> getOutputPinIndices() const { return {}; }
     virtual int getPinValue(int pinIdx) const { Q_UNUSED(pinIdx); return -1; }
+    virtual bool isPassThrough() const { return false; }
+    virtual void setPinObservedState(int pinIdx, int value) { Q_UNUSED(pinIdx); Q_UNUSED(value); }
 
     double getComponentVoltage() const { return voltage; }
     double getComponentCurrent() const { return current; }
@@ -280,9 +282,9 @@ public:
         drawPins(painter);
     }
 
-    QVector<int> getOutputPinIndices() const override { return {0}; }
+    QVector<int> getOutputPinIndices() const override { return {0, 1}; }
     int getPinValue(int pinIdx) const override {
-        Q_UNUSED(pinIdx);
+        if (pinIdx == 1) return 0;
         return Logical::voltageToState(voltage) == LogicState::High ? 1 : 0;
     }
 };
@@ -329,9 +331,9 @@ public:
         drawPins(painter);
     }
 
-    QVector<int> getOutputPinIndices() const override { return {0}; }
+    QVector<int> getOutputPinIndices() const override { return {0, 1}; }
     int getPinValue(int pinIdx) const override {
-        Q_UNUSED(pinIdx);
+        if (pinIdx == 1) return 0;
         return Logical::voltageToState(voltage) == LogicState::High ? 1 : 0;
     }
 };
@@ -411,6 +413,7 @@ public:
 class Resistor : public Passive_part {
 private:
     static inline int id_counter = 0;
+    int pinObserved[2] = {-1, -1};
 public:
     double resistance;
     Resistor(double r) : resistance(r) {
@@ -423,6 +426,16 @@ public:
     void updatestate(double dt) override {
         Q_UNUSED(dt);
         current = voltage / resistance;
+    }
+
+    QVector<int> getOutputPinIndices() const override { return {0, 1}; }
+    int getPinValue(int pinIdx) const override {
+        int other = (pinIdx == 0) ? 1 : (pinIdx == 1 ? 0 : -1);
+        return (other >= 0) ? pinObserved[other] : -1;
+    }
+    bool isPassThrough() const override { return true; }
+    void setPinObservedState(int pinIdx, int value) override {
+        if (pinIdx == 0 || pinIdx == 1) pinObserved[pinIdx] = value;
     }
 
     void draw(QPainter *painter) override {
@@ -534,6 +547,7 @@ class Switch : public Intractive_part {
 private:
     static inline int id_counter = 0;
     bool closed = false;
+    int pinObserved[2] = {-1, -1};
 
 public:
     Switch() {
@@ -546,6 +560,17 @@ public:
     void toggle() { closed = !closed; }
     bool isClosed() const { return closed; }
     double equivalentResistance() const { return closed ? 0.0 : 1e12; }
+
+    QVector<int> getOutputPinIndices() const override { return {0, 1}; }
+    int getPinValue(int pinIdx) const override {
+        if (!closed) return -1;
+        int other = (pinIdx == 0) ? 1 : (pinIdx == 1 ? 0 : -1);
+        return (other >= 0) ? pinObserved[other] : -1;
+    }
+    bool isPassThrough() const override { return closed; }
+    void setPinObservedState(int pinIdx, int value) override {
+        if (pinIdx == 0 || pinIdx == 1) pinObserved[pinIdx] = value;
+    }
 
     void draw(QPainter *painter) override {
         painter->save();
@@ -578,6 +603,7 @@ class Push_button : public Intractive_part {
 private:
     static inline int id_counter = 0;
     bool pressed = false;
+    int pinObserved[2] = {-1, -1};
 
 public:
     Push_button() {
@@ -590,6 +616,17 @@ public:
     void press()   { pressed = true; }
     void release() { pressed = false; }
     bool isPressed() const { return pressed; }
+
+    QVector<int> getOutputPinIndices() const override { return {0, 1}; }
+    int getPinValue(int pinIdx) const override {
+        if (!pressed) return -1;
+        int other = (pinIdx == 0) ? 1 : (pinIdx == 1 ? 0 : -1);
+        return (other >= 0) ? pinObserved[other] : -1;
+    }
+    bool isPassThrough() const override { return pressed; }
+    void setPinObservedState(int pinIdx, int value) override {
+        if (pinIdx == 0 || pinIdx == 1) pinObserved[pinIdx] = value;
+    }
 
     void draw(QPainter *painter) override {
         painter->save();
@@ -1330,5 +1367,267 @@ public:
         return -1;
     }
 };
+
+class VoltMeter : public Component {
+private:
+    static inline int id_counter = 0;
+    QString displayText = "0.00 V";
+public:
+    VoltMeter() {
+        id_counter++;
+        label = "VM" + QString::number(id_counter);
+        addPin("A", PinType::Input, -30, 0);
+        addPin("B", PinType::Input,  30, 0);
+    }
+    void setDisplayText(const QString &t) { displayText = t; }
+    QString getDisplayText() const { return displayText; }
+    void resetDisplay() { displayText = "0.00 V"; }
+
+    void draw(QPainter *painter) override {
+        painter->save();
+        applyTransform(painter);
+        QPen pen(Qt::black, 2);
+        painter->setPen(pen);
+        painter->drawLine(-30, 0, -20, 0);
+        painter->drawLine(20, 0, 30, 0);
+        painter->setBrush(QColor(20, 20, 20));
+        painter->drawRect(-20, -14, 40, 28);
+        painter->setPen(QColor(0, 255, 80));
+        QFont f = painter->font();
+        f.setPointSize(7);
+        painter->setFont(f);
+        painter->drawText(QRect(-18, -11, 36, 22), Qt::AlignCenter, displayText);
+        painter->setPen(Qt::black);
+        painter->drawText(-14, -20, label);
+        painter->restore();
+        drawPins(painter);
+    }
+};
+
+class AmMeter : public Component {
+private:
+    static inline int id_counter = 0;
+    QString displayText = "0.000 A";
+    double measuredCurrent = 0.0;
+    int pinObserved[2] = {-1, -1};
+public:
+    static constexpr double INTERNAL_RESISTANCE = 0.001;
+    AmMeter() {
+        id_counter++;
+        label = "AM" + QString::number(id_counter);
+        addPin("1", PinType::Bidirectional, -30, 0);
+        addPin("2", PinType::Bidirectional,  30, 0);
+    }
+    void setMeasuredCurrent(double amps) {
+        measuredCurrent = amps;
+        displayText = QString("%1 A").arg(amps, 0, 'f', 3);
+    }
+    double getMeasuredCurrent() const { return measuredCurrent; }
+    QString getDisplayText() const { return displayText; }
+    void resetDisplay() { displayText = "0.000 A"; measuredCurrent = 0.0; }
+
+    QVector<int> getOutputPinIndices() const override { return {0, 1}; }
+    int getPinValue(int pinIdx) const override {
+        int other = (pinIdx == 0) ? 1 : (pinIdx == 1 ? 0 : -1);
+        return (other >= 0) ? pinObserved[other] : -1;
+    }
+    bool isPassThrough() const override { return true; }
+    void setPinObservedState(int pinIdx, int value) override {
+        if (pinIdx == 0 || pinIdx == 1) pinObserved[pinIdx] = value;
+    }
+
+    void draw(QPainter *painter) override {
+        painter->save();
+        applyTransform(painter);
+        QPen pen(Qt::black, 2);
+        painter->setPen(pen);
+        painter->drawLine(-30, 0, -18, 0);
+        painter->drawLine(18, 0, 30, 0);
+        painter->setBrush(QColor(20, 20, 20));
+        painter->drawEllipse(-18, -18, 36, 36);
+        painter->setPen(QColor(0, 255, 80));
+        QFont f = painter->font();
+        f.setPointSize(6);
+        painter->setFont(f);
+        painter->drawText(QRect(-16, -10, 32, 20), Qt::AlignCenter, displayText);
+        painter->setPen(Qt::black);
+        painter->drawText(-10, -24, label);
+        painter->restore();
+        drawPins(painter);
+    }
+};
+
+class ADC : public Component {
+private:
+    static inline int id_counter = 0;
+    int bitCount;
+    double conversionDelay;
+    int pendingCode = 0;
+    int stableCode = 0;
+    double pendingSince = -1e18;
+    bool hasPending = false;
+
+public:
+    ADC(int bits = 8, double delay = 0.0) : bitCount(bits), conversionDelay(delay) {
+        id_counter++;
+        label = "ADC" + QString::number(id_counter);
+        addPin("AIN", PinType::Input, -30, 0);
+        addPin("VREF+", PinType::Input, -30, -20);
+        addPin("VREF-", PinType::Input, -30, 20);
+        int startY = -((bitCount - 1) * 10);
+        for (int i = 0; i < bitCount; ++i)
+            addPin(QString("D%1").arg(i), PinType::Output, 30, startY + i * 20);
+    }
+
+    int getBitCount() const { return bitCount; }
+    void setBitCount(int n) {
+        bitCount = qMax(1, n);
+        pins.clear();
+        addPin("AIN", PinType::Input, -30, 0);
+        addPin("VREF+", PinType::Input, -30, -20);
+        addPin("VREF-", PinType::Input, -30, 20);
+        int startY = -((bitCount - 1) * 10);
+        for (int i = 0; i < bitCount; ++i)
+            addPin(QString("D%1").arg(i), PinType::Output, 30, startY + i * 20);
+        stableCode = 0; pendingCode = 0; hasPending = false;
+    }
+
+    void setDelay(double d) { conversionDelay = d; }
+    double getDelay() const { return conversionDelay; }
+
+    void updateConversion(double currentTime, double vin, double vrefPlus, double vrefMinus) {
+        int maxCode = (1 << bitCount) - 1;
+        double range = vrefPlus - vrefMinus;
+        int rawCode;
+        if (range <= 0.0) rawCode = 0;
+        else if (vin <= vrefMinus) rawCode = 0;
+        else if (vin >= vrefPlus) rawCode = maxCode;
+        else rawCode = std::clamp(static_cast<int>(std::round((vin - vrefMinus) / range * maxCode)), 0, maxCode);
+
+        if (!hasPending || rawCode != pendingCode) {
+            pendingCode = rawCode;
+            pendingSince = currentTime;
+            hasPending = true;
+        }
+        if (currentTime - pendingSince >= conversionDelay) stableCode = pendingCode;
+    }
+
+    QVector<int> getOutputPinIndices() const override {
+        QVector<int> out;
+        for (int i = 0; i < bitCount; ++i) out.push_back(3 + i);
+        return out;
+    }
+    int getPinValue(int pinIdx) const override {
+        int bitIdx = pinIdx - 3;
+        if (bitIdx < 0 || bitIdx >= bitCount) return -1;
+        return (stableCode >> bitIdx) & 1;
+    }
+
+    void draw(QPainter *painter) override {
+        painter->save();
+        applyTransform(painter);
+        QPen pen(Qt::black, 2);
+        painter->setPen(pen);
+        painter->setBrush(Qt::NoBrush);
+        int h = std::max(20, (bitCount - 1) * 10 + 20);
+        painter->drawRect(-30, -h, 60, 2 * h);
+        painter->drawText(-25, -h - 5, label);
+        painter->drawText(-25, -h + 12, "AIN");
+        painter->drawText(-28, -h + 26, "VREF+");
+        painter->drawText(-28, h - 4, "VREF-");
+        int startY = -((bitCount - 1) * 10);
+        for (int i = 0; i < bitCount; ++i)
+            painter->drawText(5, startY + i * 20 + 4, QString("D%1").arg(i));
+        painter->drawText(-15, 0, "ADC");
+        painter->restore();
+        drawPins(painter);
+    }
+};
+
+class DAC : public Component {
+private:
+    static inline int id_counter = 0;
+    int bitCount;
+    double conversionDelay;
+    double pendingVoltage = 0.0;
+    double stableVoltage = 0.0;
+    double pendingSince = -1e18;
+    bool hasPending = false;
+
+public:
+    DAC(int bits = 8, double delay = 0.0) : bitCount(bits), conversionDelay(delay) {
+        id_counter++;
+        label = "DAC" + QString::number(id_counter);
+        int startY = -((bitCount - 1) * 10);
+        for (int i = 0; i < bitCount; ++i)
+            addPin(QString("D%1").arg(i), PinType::Input, -30, startY + i * 20);
+        addPin("VREF+", PinType::Input, 30, -20);
+        addPin("VREF-", PinType::Input, 30, 20);
+        addPin("AOUT", PinType::Output, 30, 0);
+    }
+
+    int getBitCount() const { return bitCount; }
+    void setDelay(double d) { conversionDelay = d; }
+    double getDelay() const { return conversionDelay; }
+    double getStableVoltage() const { return stableVoltage; }
+    int outputPinIndex() const { return bitCount + 2; }
+
+    void updateConversion(double currentTime, const QVector<int> &bits, double vrefPlus, double vrefMinus) {
+        bool anyUndefined = false;
+        int code = 0;
+        for (int i = 0; i < bitCount; ++i) {
+            int b = (i < bits.size()) ? bits[i] : -1;
+            if (b < 0) { anyUndefined = true; break; }
+            if (b == 1) code |= (1 << i);
+        }
+        if (anyUndefined) return;
+
+        int maxCode = (1 << bitCount) - 1;
+        double raw = vrefMinus + (static_cast<double>(code) / maxCode) * (vrefPlus - vrefMinus);
+
+        if (!hasPending || std::abs(raw - pendingVoltage) > 1e-9) {
+            pendingVoltage = raw;
+            pendingSince = currentTime;
+            hasPending = true;
+        }
+        if (currentTime - pendingSince >= conversionDelay) {
+            stableVoltage = pendingVoltage;
+            voltage = stableVoltage;
+        }
+    }
+
+    QVector<int> getOutputPinIndices() const override { return { outputPinIndex() }; }
+    int getPinValue(int pinIdx) const override {
+        if (pinIdx != outputPinIndex()) return -1;
+        LogicState s = Logical::voltageToState(stableVoltage);
+        return (s == LogicState::High) ? 1 : (s == LogicState::Low ? 0 : -1);
+    }
+
+    void draw(QPainter *painter) override {
+        painter->save();
+        applyTransform(painter);
+        QPen pen(Qt::black, 2);
+        painter->setPen(pen);
+        painter->setBrush(Qt::NoBrush);
+        int h = std::max(20, (bitCount - 1) * 10 + 20);
+        painter->drawRect(-30, -h, 60, 2 * h);
+        painter->drawText(-25, -h - 5, label);
+        int startY = -((bitCount - 1) * 10);
+        for (int i = 0; i < bitCount; ++i)
+            painter->drawText(-28, startY + i * 20 + 4, QString("D%1").arg(i));
+        painter->drawText(5, -h + 12, "VREF+");
+        painter->drawText(5, h - 4, "VREF-");
+        painter->drawText(5, 4, "OUT");
+        painter->drawText(-12, 0, "DAC");
+        painter->restore();
+        drawPins(painter);
+    }
+};
+
+
+
+
+
+
 
 #endif // COMPONENT_H

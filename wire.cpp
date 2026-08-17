@@ -147,19 +147,27 @@ void Wire::resetColor()
 {
     m_logicLevel = -1;
     m_simStopped = true;
-}
-
-void Wire::clearLogicLevel()
-{
-    m_logicLevel = -1;
+    m_hasAnalogVoltage = false;
 }
 
 QString Wire::probeVoltageLabel() const
 {
     if (m_simStopped) return "N/A";
+    if (m_hasAnalogVoltage) return QString("%1 V").arg(m_analogVoltage, 0, 'f', 2);
     switch (m_logicLevel) {
     case 1:  return "5.00 V";
     case 0:  return "0.00 V";
     default: return "Undefined";
     }
+}
+
+double Wire::effectiveVoltage(bool &valid) const
+{
+    valid = true;
+    if (m_simStopped) { valid = false; return 0.0; }
+    if (m_hasAnalogVoltage) return m_analogVoltage;
+    if (m_logicLevel == 1) return 5.0;
+    if (m_logicLevel == 0) return 0.0;
+    valid = false;
+    return 0.0;
 }

@@ -128,6 +128,9 @@ void MainWindow ::onNewProject()
         qDebug() << "Wizard Result:" << result;
         if (result == QDialog::Accepted) {
             schematicPage *mySchematicPage = new schematicPage();
+            connect(mySchematicPage, &schematicPage::homeRequested, this, [this]() {
+                myTabs->setCurrentIndex(0);
+            });
 
             myTabs->addTab(mySchematicPage, "Schematic Capture");
             myTabs->setCurrentIndex(myTabs->count() - 1);
@@ -148,6 +151,9 @@ void MainWindow::onOpenProject()
     if (path.isEmpty()) return;
 
     schematicPage *mySchematicPage = new schematicPage();
+    connect(mySchematicPage, &schematicPage::homeRequested, this, [this]() {
+        myTabs->setCurrentIndex(0);
+    });
     if (mySchematicPage->loadProjectFile(path)) {
         QString tabName = QFileInfo(path).completeBaseName();
         myTabs->addTab(mySchematicPage, tabName);

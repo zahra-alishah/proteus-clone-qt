@@ -38,6 +38,8 @@
 #include <QMouseEvent>
 #include <QDebug>
 #include <QScrollBar>
+#include <map>
+#include <functional>
 
 namespace {
 
@@ -646,6 +648,11 @@ schematicPage::schematicPage(QWidget *parent)
     });
 
     schematicCanvas = new shematicClass();
+
+    connect(actHome, &QAction::triggered, this, &schematicPage::homeRequested);
+
+    connect(actCut, &QAction::triggered, this, &schematicPage::onDeleteSelected);
+
     connect(actZoomIn, &QAction::triggered, this, [this]() {
         schematicCanvas->zoomIn();
         if (componentOverlay) componentOverlay->update();
@@ -678,9 +685,16 @@ schematicPage::schematicPage(QWidget *parent)
     splitter->setHandleWidth(0);
 
     QWidget *sidebar = new QWidget();
-    QVBoxLayout *sideLayout = new QVBoxLayout(sidebar);
-    sideLayout->setContentsMargins(2, 2, 2, 2);
+    QHBoxLayout *sideLayout = new QHBoxLayout(sidebar);
+    sideLayout->setContentsMargins(0, 0, 0, 0);
     sideLayout->setSpacing(0);
+
+    QWidget *buttonColumn = new QWidget();
+    buttonColumn->setFixedWidth(34);
+    buttonColumn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    QVBoxLayout *buttonColumnLayout = new QVBoxLayout(buttonColumn);
+    buttonColumnLayout->setContentsMargins(2, 2, 2, 2);
+    buttonColumnLayout->setSpacing(0);
 
     QToolButton *btnSelection = new QToolButton;
     QToolButton *btnComponent = new QToolButton;
@@ -794,37 +808,37 @@ schematicPage::schematicPage(QWidget *parent)
     toolGroup->addButton(btnYMirror);
 
     QStackedWidget *modeStack = new QStackedWidget();
-    sideLayout->addWidget(modeStack);
     modeStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    sideLayout->addWidget(btnSelection);
-    sideLayout->addWidget(btnComponent);
-    sideLayout->addWidget(btnJunctionDot);
-    sideLayout->addWidget(btnWireLabel);
-    sideLayout->addWidget(btnTextScript);
-    sideLayout->addWidget(btnBuses);
-    sideLayout->addWidget(btnSubCircuit);
-    sideLayout->addWidget(btnTerminals);
-    sideLayout->addWidget(btnDevicePins);
-    sideLayout->addWidget(btnGraph);
-    sideLayout->addWidget(btnActivePopUp);
-    sideLayout->addWidget(btnGenerator);
-    sideLayout->addWidget(btnProbMode);
-    sideLayout->addWidget(btnVirtualInstruments);
-    sideLayout->addWidget(btn2DGraphicsLine);
-    sideLayout->addWidget(btn2DGraphicsBox);
-    sideLayout->addWidget(btn2DGraphicsCircle);
-    sideLayout->addWidget(btn2DGraphicsArc);
-    sideLayout->addWidget(btn2DGraphicsClosedPath);
-    sideLayout->addWidget(btn2DGraphicsText);
-    sideLayout->addWidget(btn2DGraphicsSymbols);
-    sideLayout->addWidget(btn2DGraphicsMarkers);
-    sideLayout->addWidget(btnRotateClockwise);
-    sideLayout->addWidget(btnRotateAntiClockwise);
+    buttonColumnLayout->addWidget(btnSelection);
+    buttonColumnLayout->addWidget(btnComponent);
+    buttonColumnLayout->addWidget(btnJunctionDot);
+    buttonColumnLayout->addWidget(btnWireLabel);
+    buttonColumnLayout->addWidget(btnTextScript);
+    buttonColumnLayout->addWidget(btnBuses);
+    buttonColumnLayout->addWidget(btnSubCircuit);
+    buttonColumnLayout->addWidget(btnTerminals);
+    buttonColumnLayout->addWidget(btnDevicePins);
+    buttonColumnLayout->addWidget(btnGraph);
+    buttonColumnLayout->addWidget(btnActivePopUp);
+    buttonColumnLayout->addWidget(btnGenerator);
+    buttonColumnLayout->addWidget(btnProbMode);
+    buttonColumnLayout->addWidget(btnVirtualInstruments);
+    buttonColumnLayout->addWidget(btn2DGraphicsLine);
+    buttonColumnLayout->addWidget(btn2DGraphicsBox);
+    buttonColumnLayout->addWidget(btn2DGraphicsCircle);
+    buttonColumnLayout->addWidget(btn2DGraphicsArc);
+    buttonColumnLayout->addWidget(btn2DGraphicsClosedPath);
+    buttonColumnLayout->addWidget(btn2DGraphicsText);
+    buttonColumnLayout->addWidget(btn2DGraphicsSymbols);
+    buttonColumnLayout->addWidget(btn2DGraphicsMarkers);
+    buttonColumnLayout->addWidget(btnRotateClockwise);
+    buttonColumnLayout->addWidget(btnRotateAntiClockwise);
 
     rotationSpin->setRange(0, 359);
     rotationSpin->setSuffix("°");
     rotationSpin->setValue(0);
+    rotationSpin->setFixedWidth(30);
 
     btnSelection->setToolTip("Selection Mode");
     btnComponent->setToolTip("Component Mode");
@@ -880,6 +894,20 @@ schematicPage::schematicPage(QWidget *parent)
     btnXMirror->setIcon(QIcon(":/icons/xmirror.svg"));
     btnYMirror->setIcon(QIcon(":/icons/ymirror.svg"));
 
+    const QList<QToolButton*> sidebarButtons = {
+        btnSelection, btnComponent, btnJunctionDot, btnWireLabel, btnTextScript,
+        btnBuses, btnSubCircuit, btnTerminals, btnDevicePins, btnGraph,
+        btnActivePopUp, btnGenerator, btnProbMode, btnVirtualInstruments,
+        btn2DGraphicsLine, btn2DGraphicsBox, btn2DGraphicsCircle, btn2DGraphicsArc,
+        btn2DGraphicsClosedPath, btn2DGraphicsText, btn2DGraphicsSymbols,
+        btn2DGraphicsMarkers, btnRotateClockwise, btnRotateAntiClockwise,
+        btnXMirror, btnYMirror
+    };
+    for (QToolButton *btn : sidebarButtons) {
+        btn->setIconSize(QSize(20, 20));
+        btn->setFixedSize(30, 30);
+    }
+
     // INDEX 0
     QWidget *widgetDevices = new QWidget();
     QVBoxLayout *layoutDevices = new QVBoxLayout(widgetDevices);
@@ -893,6 +921,7 @@ schematicPage::schematicPage(QWidget *parent)
         "QListWidget::item { color: black; padding: 2px; }"
         "QListWidget::item:selected { background-color: #4a90e2; color: white; }"
         );
+    devicesListWidget->addItems({"VOLTMETER", "AMMETER", "ADC", "DAC"});
     layoutDevices->addWidget(devicesListWidget);
     connect(devicesListWidget, &QListWidget::itemClicked, this, &schematicPage::onDeviceListItemClicked);
 
@@ -1096,7 +1125,10 @@ schematicPage::schematicPage(QWidget *parent)
     });
 
     connect(btnComponent, &QToolButton::toggled, this, [=](bool checked) {
-        if (checked) modeStack->setCurrentIndex(0);
+        if (checked) {
+            modeStack->setCurrentIndex(0);
+            onPickDevices();
+        }
     });
 
     connect(btnJunctionDot, &QToolButton::toggled, this, [=](bool checked) {
@@ -1196,18 +1228,21 @@ schematicPage::schematicPage(QWidget *parent)
     connect(actUndo, &QAction::triggered, this, &schematicPage::undoAction);
     connect(actRedo, &QAction::triggered, this, &schematicPage::redoAction);
 
-    sideLayout->addWidget(rotationSpin);
-    sideLayout->addWidget(btnXMirror);
-    sideLayout->addWidget(btnYMirror);
+    buttonColumnLayout->addWidget(rotationSpin);
+    buttonColumnLayout->addWidget(btnXMirror);
+    buttonColumnLayout->addWidget(btnYMirror);
+    buttonColumnLayout->addStretch();
+
+    sideLayout->addWidget(buttonColumn);
+    sideLayout->addWidget(modeStack);
 
     // --- Build the canvas and bottom bar ---
     schematicCanvas->setMouseTracking(true);
     schematicCanvas->setContextMenuPolicy(Qt::CustomContextMenu);
-
-    componentOverlay = new ComponentOverlay(&componentsOnboard, &wiresOnboard, &junctionsOnboard, &wiringPreviewActive, &wiringPreviewPath, schematicCanvas, &probeDisplayActive, &probeDisplayText, &probeDisplayPos, schematicCanvas->viewport());    componentOverlay->setGeometry(schematicCanvas->viewport()->rect());
+    componentOverlay = new ComponentOverlay(&componentsOnboard, &wiresOnboard, &junctionsOnboard, &wiringPreviewActive, &wiringPreviewPath, schematicCanvas, &probeDisplayActive, &probeDisplayText, &probeDisplayPos, schematicCanvas->viewport());
+    componentOverlay->setGeometry(schematicCanvas->viewport()->rect());
     componentOverlay->raise();
     componentOverlay->show();
-
     schematicCanvas->viewport()->installEventFilter(this);
 
     connect(schematicCanvas, &shematicClass::canvasClicked,
@@ -1281,21 +1316,29 @@ schematicPage::schematicPage(QWidget *parent)
     btnRestart->setToolTip("Restart");
     btnRestart->setStyleSheet("color: black;");
 
+    btnStep = new QPushButton();
+    btnStep->setToolTip("Step");
+    btnStep->setStyleSheet("color: black;");
+
 
     bottomLayout->insertWidget(0, btnRun);
     bottomLayout->insertWidget(1, btnPause);
     bottomLayout->insertWidget(2, btnStop);
     bottomLayout->insertWidget(3, btnRestart);
+    bottomLayout->insertWidget(4, btnStep);
 
     connect(btnRun, &QPushButton::clicked, this, &schematicPage::onRun);
     connect(btnPause, &QPushButton::clicked, this, &schematicPage::onPause);
     connect(btnStop, &QPushButton::clicked, this, &schematicPage::onStop);
     connect(btnRestart, &QPushButton::clicked, this, &schematicPage::onRestart);
+    connect(btnStep, &QPushButton::clicked, this, &schematicPage::onStepSimulation);
 
     btnRun->setIcon(QIcon(":/icons/play.png"));
     btnPause->setIcon(QIcon(":/icons/pause.png"));
     btnStop->setIcon(QIcon(":/icons/stop.png"));
     btnRestart->setIcon(QIcon(":/icons/resume.png"));
+    btnStep->setIcon(QIcon(":/icons/step.png"));
+
 
 
     simTimer = new QTimer(this);
@@ -1646,6 +1689,12 @@ void schematicPage::onCanvasClicked(QPointF pos, Qt::KeyboardModifiers modifiers
             newComp = new DC_vol_source(5.0);
         else if (type.contains("RESISTOR"))
             newComp = new Resistor(1000);
+        else if (type.contains("VOLTMETER") || type.contains("VOLT METER"))
+            newComp = new VoltMeter();
+        else if (type.contains("AMMETER") || type.contains("AMP METER") || type.contains("CURRENT METER"))
+            newComp = new AmMeter();
+        else if (type.contains("CAPACITOR"))
+            newComp = new Capacitor(0.000001);
         else if (type.contains("CAPACITOR"))
             newComp = new Capacitor(0.000001);
         else if (type.contains("INDUCTOR"))
@@ -1674,6 +1723,11 @@ void schematicPage::onCanvasClicked(QPointF pos, Qt::KeyboardModifiers modifiers
             newComp = new NOTGate();
         else if (type.contains("FLIP") || type.contains("DFF") || type.contains("DTFF") || type.contains("D-FF"))
             newComp = new DFlipFlop();
+        else if (type.contains("ADC"))
+            newComp = new ADC(8, 0.0);
+        else if (type.contains("DAC"))
+            newComp = new DAC(8, 0.0);
+
 
         if (newComp) {
             int sx = qRound(pos.x() / gridSize) * gridSize;
@@ -1996,6 +2050,31 @@ void schematicPage::openEditDialogFor(Component *comp)
         if (dlg.exec() == QDialog::Accepted) {
             comp->setName(dlg.label());
             r->resistance = dlg.fieldValue(0);
+            if (componentOverlay) componentOverlay->update();
+            pushUndoState();
+        }
+        return;
+    }
+
+    if (auto *adc = dynamic_cast<ADC *>(comp)) {
+        fields.push_back({"Bit Count", static_cast<double>(adc->getBitCount()), ""});
+        fields.push_back({"Conversion Delay", adc->getDelay(), "s"});
+        ComponentEditDialog dlg(comp->getName(), fields, this);
+        if (dlg.exec() == QDialog::Accepted) {
+            comp->setName(dlg.label());
+            adc->setBitCount(qMax(1, static_cast<int>(qRound(dlg.fieldValue(0)))));
+            adc->setDelay(dlg.fieldValue(1));
+            if (componentOverlay) componentOverlay->update();
+            pushUndoState();
+        }
+        return;
+    }
+    if (auto *dac = dynamic_cast<DAC *>(comp)) {
+        fields.push_back({"Conversion Delay", dac->getDelay(), "s"});
+        ComponentEditDialog dlg(comp->getName(), fields, this);
+        if (dlg.exec() == QDialog::Accepted) {
+            comp->setName(dlg.label());
+            dac->setDelay(dlg.fieldValue(0));
             if (componentOverlay) componentOverlay->update();
             pushUndoState();
         }
@@ -2581,6 +2660,7 @@ void schematicPage::updateButtonStates()
     btnPause->setEnabled(isRunning && !isPaused);
     btnStop->setEnabled(isRunning);
     btnRestart->setEnabled(true);
+    btnStep->setEnabled(!isRunning || isPaused);
 }
 
 void schematicPage::onRun()
@@ -2621,6 +2701,12 @@ void schematicPage::onStop()
     for (Wire* w : wiresOnboard) {
         w->resetColor();
     }
+
+    for (Component *c : componentsOnboard) {
+        if (auto *vm = dynamic_cast<VoltMeter*>(c)) vm->resetDisplay();
+        if (auto *am = dynamic_cast<AmMeter*>(c)) am->resetDisplay();
+    }
+
     if (schematicCanvas) schematicCanvas->update();
 }
 
@@ -2630,19 +2716,42 @@ void schematicPage::onRestart()
     onRun();
 }
 
-void schematicPage::advanceSimulation()
+void schematicPage::onStepSimulation()
+{
+    if (!isRunning) {
+        isRunning = true;
+        isPaused = true;
+        simTime = 0.0;
+        statusLabel->setText("Paused");
+        updateButtonStates();
+    } else if (!isPaused) {
+        return;
+    }
+
+    simulateOneStep();
+}
+
+void schematicPage::simulateOneStep()
 {
     double step = 0.01;
     simTime += step;
 
     timeLabel->setText(QString("t = %1 s").arg(simTime, 0, 'f', 3));
 
+    computeAnalogVoltages();
     propagateLogicStates();
     updateWireColors();
+    computeAnalogVoltages();
+    updateMeterReadings();
 
     if (schematicCanvas) schematicCanvas->update();
 
     if (simTime >= 10.0) onStop();
+}
+
+void schematicPage::advanceSimulation()
+{
+    simulateOneStep();
 }
 
 Wire* schematicPage::findWireConnectedToPin(const Component* comp, int pinIdx) const
@@ -2656,9 +2765,10 @@ Wire* schematicPage::findWireConnectedToPin(const Component* comp, int pinIdx) c
     return nullptr;
 }
 
+
 void schematicPage::propagateLogicStates()
 {
-    const int maxPasses = componentsOnboard.size() + 1; // enough for feed-forward chains to settle
+    const int maxPasses = componentsOnboard.size() + 1;
 
     for (int pass = 0; pass < maxPasses; ++pass) {
         for (Component *comp : componentsOnboard) {
@@ -2693,6 +2803,57 @@ void schematicPage::propagateLogicStates()
                 dff->setClock(readPin(1));
                 dff->evaluate();
             }
+            else if (comp->isPassThrough()) {
+                for (int i = 0; i < comp->pinCount(); ++i) {
+                    int val = -1;
+                    Wire *w = findWireConnectedToPin(comp, i);
+                    if (w && !w->isDangling()) {
+                        Component *other = (w->startComponent() == comp) ? w->endComponent() : w->startComponent();
+                        int otherPin     = (w->startComponent() == comp) ? w->endPinIndex()   : w->startPinIndex();
+                        if (other) val = other->getPinValue(otherPin);
+                    }
+                    comp->setPinObservedState(i, val);
+                }
+            }
+            else if (auto *adc = dynamic_cast<ADC*>(comp)) {
+                auto readVoltage = [&](int pinIdx, double fallback) -> double {
+                    Wire *w = findWireConnectedToPin(adc, pinIdx);
+                    if (!w || w->isDangling()) return fallback;
+                    bool valid = false;
+                    double v = w->effectiveVoltage(valid);
+                    return valid ? v : fallback;
+                };
+                double vin = readVoltage(0, 0.0);
+                double vrefPlus = readVoltage(1, 5.0);
+                double vrefMinus = readVoltage(2, 0.0);
+                adc->updateConversion(simTime, vin, vrefPlus, vrefMinus);
+            }
+            else if (auto *dac = dynamic_cast<DAC*>(comp)) {
+                QVector<int> bits;
+                for (int i = 0; i < dac->getBitCount(); ++i) {
+                    LogicState s = LogicState::Undefined;
+                    Wire *w = findWireConnectedToPin(dac, i);
+                    if (w && !w->isDangling()) {
+                        Component *other = (w->startComponent() == dac) ? w->endComponent() : w->startComponent();
+                        int otherPin     = (w->startComponent() == dac) ? w->endPinIndex()   : w->startPinIndex();
+                        if (other) {
+                            int v = other->getPinValue(otherPin);
+                            s = (v == 1) ? LogicState::High : (v == 0) ? LogicState::Low : LogicState::Undefined;
+                        }
+                    }
+                    bits.push_back(s == LogicState::High ? 1 : (s == LogicState::Low ? 0 : -1));
+                }
+                auto readVoltage = [&](int pinIdx, double fallback) -> double {
+                    Wire *w = findWireConnectedToPin(dac, pinIdx);
+                    if (!w || w->isDangling()) return fallback;
+                    bool valid = false;
+                    double v = w->effectiveVoltage(valid);
+                    return valid ? v : fallback;
+                };
+                double vrefPlus = readVoltage(dac->getBitCount(), 5.0);
+                double vrefMinus = readVoltage(dac->getBitCount() + 1, 0.0);
+                dac->updateConversion(simTime, bits, vrefPlus, vrefMinus);
+            }
         }
     }
 }
@@ -2700,18 +2861,212 @@ void schematicPage::propagateLogicStates()
 void schematicPage::updateWireColors()
 {
     for (Wire* w : wiresOnboard) {
-        w->clearLogicLevel();
-        w->setSimRunning(true);
+        w->resetColor();
+        w->clearAnalogVoltage();
     }
 
     for (Component* comp : componentsOnboard) {
+        if (!comp->isPassThrough()) continue;
         QVector<int> outputs = comp->getOutputPinIndices();
         for (int pinIdx : outputs) {
             int value = comp->getPinValue(pinIdx);
             Wire* wire = findWireConnectedToPin(comp, pinIdx);
-            if (wire) {
-                wire->setLogicLevel(value);
+            if (wire) wire->setLogicLevel(value);
+        }
+    }
+
+    for (Component* comp : componentsOnboard) {
+        if (comp->isPassThrough()) continue;
+        QVector<int> outputs = comp->getOutputPinIndices();
+        for (int pinIdx : outputs) {
+            int value = comp->getPinValue(pinIdx);
+            Wire* wire = findWireConnectedToPin(comp, pinIdx);
+            if (wire) wire->setLogicLevel(value);
+        }
+    }
+}
+
+void schematicPage::computeAnalogVoltages()
+{
+    std::map<std::pair<Component*, int>, int> pinIndex;
+    int nextId = 0;
+    for (Component *c : componentsOnboard) {
+        if (!c) continue;
+        for (int p = 0; p < c->pinCount(); ++p) pinIndex[{c, p}] = nextId++;
+    }
+    if (nextId == 0) return;
+
+    std::vector<int> parent(nextId);
+    for (int i = 0; i < nextId; ++i) parent[i] = i;
+    std::function<int(int)> find = [&](int x) -> int {
+        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+        return x;
+    };
+    auto unite = [&](int a, int b) {
+        a = find(a); b = find(b);
+        if (a != b) parent[a] = b;
+    };
+    auto pinId = [&](Component *c, int p) -> int {
+        auto it = pinIndex.find({c, p});
+        return (it != pinIndex.end()) ? it->second : -1;
+    };
+
+    for (Wire *w : wiresOnboard) {
+        if (!w || w->isDangling()) continue;
+        int a = pinId(w->startComponent(), w->startPinIndex());
+        int b = pinId(w->endComponent(), w->endPinIndex());
+        if (a >= 0 && b >= 0) unite(a, b);
+    }
+
+    struct Edge { int a, b; double r; Component *comp; bool isAmmeter; };
+    QVector<Edge> edges;
+    for (Component *c : componentsOnboard) {
+        if (auto *res = dynamic_cast<Resistor*>(c)) {
+            int a = pinId(res, 0), b = pinId(res, 1);
+            if (a >= 0 && b >= 0 && res->resistance > 0) {
+                edges.push_back({find(a), find(b), res->resistance, res, false});
             }
+        } else if (auto *am = dynamic_cast<AmMeter*>(c)) {
+            int a = pinId(am, 0), b = pinId(am, 1);
+            if (a >= 0 && b >= 0) {
+                edges.push_back({find(a), find(b), AmMeter::INTERNAL_RESISTANCE, am, true});
+            }
+        }
+    }
+    if (edges.isEmpty()) return;
+
+    std::map<int, double> fixed;
+    for (Component *c : componentsOnboard) {
+        if (auto *gnd = dynamic_cast<GND*>(c)) {
+            int id = pinId(gnd, 0);
+            if (id >= 0) fixed[find(id)] = 0.0;
+        } else if (auto *dc = dynamic_cast<DC_vol_source*>(c)) {
+            int plus = pinId(dc, 0), minus = pinId(dc, 1);
+            if (minus >= 0) fixed[find(minus)] = 0.0;
+            if (plus >= 0) fixed[find(plus)] = dc->getVoltage();
+        } else if (auto *bat = dynamic_cast<Battery*>(c)) {
+            int plus = pinId(bat, 0), minus = pinId(bat, 1);
+            if (minus >= 0) fixed[find(minus)] = 0.0;
+            if (plus >= 0) fixed[find(plus)] = bat->getVoltage();
+        } else if (auto *dac = dynamic_cast<DAC*>(c)) {
+            int id = pinId(dac, dac->outputPinIndex());
+            if (id >= 0) fixed[find(id)] = dac->getStableVoltage();
+        }
+    }
+    if (fixed.empty()) return;
+
+    std::map<int, int> nodeIndex;
+    int numNodes = 0;
+    for (const Edge &e : edges) {
+        if (!nodeIndex.count(e.a)) nodeIndex[e.a] = numNodes++;
+        if (!nodeIndex.count(e.b)) nodeIndex[e.b] = numNodes++;
+    }
+
+    QVector<bool> isFixedNode(numNodes, false);
+    QVector<double> fixedVoltage(numNodes, 0.0);
+    for (const auto &kv : nodeIndex) {
+        auto fit = fixed.find(kv.first);
+        if (fit != fixed.end()) {
+            isFixedNode[kv.second] = true;
+            fixedVoltage[kv.second] = fit->second;
+        }
+    }
+
+    QVector<QVector<double>> A(numNodes, QVector<double>(numNodes, 0.0));
+    QVector<double> b(numNodes, 0.0);
+    for (const Edge &e : edges) {
+        int i = nodeIndex[e.a];
+        int j = nodeIndex[e.b];
+        double g = 1.0 / e.r;
+        if (!isFixedNode[i]) {
+            A[i][i] += g;
+            if (!isFixedNode[j]) A[i][j] -= g; else b[i] += g * fixedVoltage[j];
+        }
+        if (!isFixedNode[j]) {
+            A[j][j] += g;
+            if (!isFixedNode[i]) A[j][i] -= g; else b[j] += g * fixedVoltage[i];
+        }
+    }
+
+    QVector<double> V(numNodes, 0.0);
+    for (int i = 0; i < numNodes; ++i) V[i] = isFixedNode[i] ? fixedVoltage[i] : 0.0;
+
+    QVector<int> unknowns;
+    for (int i = 0; i < numNodes; ++i) if (!isFixedNode[i]) unknowns.push_back(i);
+    int n = unknowns.size();
+    if (n > 0) {
+        QVector<QVector<double>> M(n, QVector<double>(n + 1, 0.0));
+        for (int r = 0; r < n; ++r) {
+            int gi = unknowns[r];
+            for (int c2 = 0; c2 < n; ++c2) M[r][c2] = A[gi][unknowns[c2]];
+            M[r][n] = b[gi];
+        }
+        for (int col = 0; col < n; ++col) {
+            int pivot = col;
+            for (int r = col + 1; r < n; ++r)
+                if (std::abs(M[r][col]) > std::abs(M[pivot][col])) pivot = r;
+            if (std::abs(M[pivot][col]) < 1e-12) continue;
+            std::swap(M[col], M[pivot]);
+            for (int r = 0; r < n; ++r) {
+                if (r == col) continue;
+                double factor = M[r][col] / M[col][col];
+                for (int cc = col; cc <= n; ++cc) M[r][cc] -= factor * M[col][cc];
+            }
+        }
+        for (int r = 0; r < n; ++r) {
+            double diag = M[r][r];
+            V[unknowns[r]] = (std::abs(diag) > 1e-12) ? (M[r][n] / diag) : 0.0;
+        }
+    }
+
+    for (const Edge &e : edges) {
+        if (!e.isAmmeter) continue;
+        auto *am = dynamic_cast<AmMeter*>(e.comp);
+        if (!am) continue;
+        int ia = nodeIndex[e.a], ib = nodeIndex[e.b];
+        double current = (V[ia] - V[ib]) / e.r;
+        am->setMeasuredCurrent(current);
+    }
+
+    std::map<int, double> rootVoltage;
+    for (const auto &kv : nodeIndex) rootVoltage[kv.first] = V[kv.second];
+
+    for (Wire *w : wiresOnboard) {
+        if (!w || w->isDangling()) continue;
+        int a = pinId(w->startComponent(), w->startPinIndex());
+        if (a < 0) continue;
+        auto it = rootVoltage.find(find(a));
+        if (it != rootVoltage.end()) w->setAnalogVoltage(it->second);
+    }
+}
+
+void schematicPage::updateMeterReadings()
+{
+    bool hasGround = false;
+    for (Component *c : componentsOnboard) {
+        if (dynamic_cast<GND*>(c)) { hasGround = true; break; }
+    }
+
+    for (Component *comp : componentsOnboard) {
+        auto *vm = dynamic_cast<VoltMeter*>(comp);
+        if (!vm) continue;
+
+        Wire *wa = findWireConnectedToPin(vm, 0);
+        Wire *wb = findWireConnectedToPin(vm, 1);
+
+        bool validA = false, validB = false;
+        double va = 0.0, vb = 0.0;
+        if (wa && !wa->isDangling()) va = wa->effectiveVoltage(validA);
+        if (wb && !wb->isDangling()) vb = wb->effectiveVoltage(validB);
+
+        if (validA && validB) {
+            vm->setDisplayText(QString("%1 V").arg(va - vb, 0, 'f', 2));
+        } else if (validA && !wb) {
+            vm->setDisplayText(hasGround ? QString("%1 V").arg(va, 0, 'f', 2) : "ERR");
+        } else if (validB && !wa) {
+            vm->setDisplayText(hasGround ? QString("%1 V").arg(-vb, 0, 'f', 2) : "ERR");
+        } else {
+            vm->setDisplayText("Undefined");
         }
     }
 }

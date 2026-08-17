@@ -75,5 +75,6 @@
         <file>icons/resume.png</file>
         <file>icons/play.png</file>
         <file>icons/pause.png</file>
+        <file>icons/step.png</file>
     </qresource>
 </RCC>

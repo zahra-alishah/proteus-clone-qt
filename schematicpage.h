@@ -34,7 +34,8 @@ public:
     explicit schematicPage(QWidget *parent = nullptr);
     ~schematicPage();
     bool loadProjectFile(const QString &path);
-
+signals:
+    void homeRequested();
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 private:
@@ -120,16 +121,20 @@ private:
     QPushButton *btnPause;
     QPushButton *btnStop;
     QPushButton *btnRestart;
+    QPushButton *btnStep;
 
     QLabel *statusLabel;
     QLabel *timeLabel;
 
     void updateButtonStates();
+    void simulateOneStep();
 
     Wire* findWireConnectedToPin(const Component* comp, int pinIdx) const;
 
     void propagateLogicStates();
     void updateWireColors();
+    void computeAnalogVoltages();
+    void updateMeterReadings();
 
 private slots:
     void onPickDevices();
@@ -150,7 +155,9 @@ private slots:
     void onStop();
     void onRestart();
     void onPause();
+    void onStepSimulation();
     void advanceSimulation();
+
 
 };
 #endif // SCHEMATICPAGE_H
